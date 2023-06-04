@@ -13,7 +13,7 @@ class Reader():
         matriz = []
         for line in content:
             line = line.strip('\n')
-            matriz.append(line.split(sep=','))
+            matriz.append(line.split(sep='|'))
         return matriz
 
 
