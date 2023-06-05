@@ -4,6 +4,7 @@ class NFA():
         self.temp = []
 
     def NFAtoDFA(self, nfa):
+        # Verifica se exitem Epsilon transicoes no automato
         if '&' in nfa[0]:
             dfa = self.epsilonTran(nfa)
         else:
@@ -13,35 +14,50 @@ class NFA():
 
     def epsilonTran(self, nfa):
         epsilon = []
-        
+        # Descobre em qual coluna temos a & transicao
         for i in range(len(nfa[0])):
             if nfa[0][i] == '&':
                 epsilonPosition = i
-
+        # Anota as transicoes listadas
         for i in range(len(nfa)-1):
-            epsilon.append([nfa[i+1][0]])
-
-        for _ in range(3):
-            for i in range(len(nfa)-1):
-                if nfa[i+1][epsilonPosition] != '-':
-                    test = []
-                    test = nfa[i+1][epsilonPosition].split(',')
-                    for item in test:
-                        if item not in epsilon[i]:
-                            print(epsilon[i])
-                            epsilon[i].append(item)
-        print(epsilon)
-        nfa[0].pop(epsilonPosition)
-        for i in range(len(nfa)-1):
-            nfa[i+1].pop(epsilonPosition)
-            for j in range(len(nfa[0])):
-                for e in range(len(epsilon)):
-                    strip = epsilon[e][0].strip('->')
+            strip = nfa[i+1][epsilonPosition].strip('*')
+            transitions = strip.split(',')
+            for item in transitions:
+                if item != '-':
+                    strip = nfa[i+1][0].strip('->')
                     strip = strip.strip('*')
-                    if strip in nfa[i+1][j]:
-                        print(epsilon[e])
-                        nfa[i+1][j] = ','.join(epsilon[e])
-        print(nfa)
+                    epsilon.append((strip,item))
+        # Faz epsilon fecho
+        oldEpsilon = []
+        while oldEpsilon != epsilon:
+            oldEpsilon = epsilon
+            epsilon = []
+            for item in oldEpsilon:
+                epsilon.append(item)
+            for ab in oldEpsilon:
+                for bc in oldEpsilon:
+                    if ab[1] == bc[0]:
+                        if ((ab[0],bc[1]) not in oldEpsilon):
+                            epsilon.append((ab[0],bc[1]))
+        # Remove as epsilon transicoes do automato
+        for i in range(len(nfa)):
+            nfa[i].pop(epsilonPosition)
+        # Monta um dicionario para modificar o automato
+        translationDic = {}
+        for item in epsilon:
+            if item[0] not in translationDic.keys():
+                translationDic[item[0]] = item[1]
+            else:
+                if item[1] not in translationDic[item[0]]:
+                    translationDic[item[0]] = translationDic[item[0]] + ',' + item[1]
+        # Troca um estado por seu epsilon fecho
+        for i in range(len(nfa)-1):
+            for j in range(len(nfa[0])):
+                strip = nfa[i+1][j].strip('->')
+                strip = strip.strip('*')
+                if strip in translationDic.keys():
+                    nfa[i+1][j] = nfa[i+1][j].replace(strip,strip+','+translationDic[strip])
+        # Executa o algoritmo sem epsilon transicoes
         return self.notEpsilonTran(nfa)
 
     def notEpsilonTran(self, nfa):
@@ -50,13 +66,15 @@ class NFA():
         dfa = nfa
         for i in range(len(nfa)-1):
             queue.append(nfa[i+1])
-            totalStates.append(nfa[i+1][0])
+            strip = dfa[i+1][0].strip('->')
+            strip = strip.strip('*')
+            totalStates.append(strip)
         while queue:
             state = queue.pop(0)
             for i in range(len(state)-1):
                 if ',' in state[i+1]:
                     if state[i+1] not in totalStates:
-                        totalStates.append(state[i+1])
+                        totalStates.append(state[i+1].strip('*'))
                         newSate = self.addState(dfa, state[i+1])
                         queue.append(newSate)
                         dfa.append(newSate)
@@ -92,6 +110,6 @@ class NFA():
         
 '''
 teste = NFA()
-aaaa = [['X', 'a', 'b', '&'], ['->q0', 'q1', 'q2', 'q1'], ['q1', 'q2,q0', 'q1', '-'], ['*q2', 'q1', 'q2', '-']]
+aaaa = [['X', 'a', 'b', 'c', '&'], ['->*q0', 'q0', '-', '-', 'q1'], ['*q1', '-', 'q1', '-', 'q2'], ['*q2', '-', '-', 'q2', '-']]
 print(teste.epsilonTran(aaaa))
 '''
