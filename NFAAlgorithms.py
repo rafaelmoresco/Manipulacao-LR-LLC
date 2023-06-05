@@ -50,6 +50,22 @@ class NFA():
             else:
                 if item[1] not in translationDic[item[0]]:
                     translationDic[item[0]] = translationDic[item[0]] + ',' + item[1]
+        
+        for i in range(len(nfa)-1):
+            strip = nfa[i+1][0].strip('->')
+            strip = strip.strip('*')
+            if strip in translationDic.keys():
+                unionStates = translationDic[strip].split(',')
+                unionStates.insert(1,strip)
+                for j in range(len(nfa[0])-1):
+                    for k in range(len(nfa)-1):
+                        strip = nfa[k+1][0].strip('->')
+                        strip = strip.strip('*')
+                        if strip in unionStates and i != k and nfa[k+1][j+1] != '-':
+                            if nfa[i+1][j+1] == '-':
+                                nfa[i+1][j+1] = nfa[k+1][j+1]
+                            else:
+                                nfa[i+1][j+1] = nfa[i+1][j+1] + ',' + nfa[k+1][j+1]
         # Troca um estado por seu epsilon fecho
         for i in range(len(nfa)-1):
             for j in range(len(nfa[0])):
@@ -57,6 +73,7 @@ class NFA():
                 strip = strip.strip('*')
                 if strip in translationDic.keys():
                     nfa[i+1][j] = nfa[i+1][j].replace(strip,strip+','+translationDic[strip])
+        print(nfa)
         # Executa o algoritmo sem epsilon transicoes
         return self.notEpsilonTran(nfa)
 
@@ -85,6 +102,7 @@ class NFA():
         newLine = []
         newLine.append(state)
         f = True
+        final = False
         for i in range(len(dfa[0])-1):
             newLine.append('')
         states = state.split(',')
