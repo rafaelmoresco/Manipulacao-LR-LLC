@@ -5,16 +5,46 @@ class NFA():
 
     def NFAtoDFA(self, nfa):
         if '&' in nfa[0]:
-            dfa = self.eplisonTran(nfa)
+            dfa = self.epsilonTran(nfa)
         else:
-            dfa = self.notEplisonTran(nfa)
+            dfa = self.notEpsilonTran(nfa)
 
         return dfa
 
-    def eplisonTran():
-        pass
+    def epsilonTran(self, nfa):
+        epsilon = []
+        
+        for i in range(len(nfa[0])):
+            if nfa[0][i] == '&':
+                epsilonPosition = i
 
-    def notEplisonTran(self, nfa):
+        for i in range(len(nfa)-1):
+            epsilon.append([nfa[i+1][0]])
+
+        for _ in range(3):
+            for i in range(len(nfa)-1):
+                if nfa[i+1][epsilonPosition] != '-':
+                    test = []
+                    test = nfa[i+1][epsilonPosition].split(',')
+                    for item in test:
+                        if item not in epsilon[i]:
+                            print(epsilon[i])
+                            epsilon[i].append(item)
+        print(epsilon)
+        nfa[0].pop(epsilonPosition)
+        for i in range(len(nfa)-1):
+            nfa[i+1].pop(epsilonPosition)
+            for j in range(len(nfa[0])):
+                for e in range(len(epsilon)):
+                    strip = epsilon[e][0].strip('->')
+                    strip = strip.strip('*')
+                    if strip in nfa[i+1][j]:
+                        print(epsilon[e])
+                        nfa[i+1][j] = ','.join(epsilon[e])
+        print(nfa)
+        return self.notEpsilonTran(nfa)
+
+    def notEpsilonTran(self, nfa):
         queue = []
         totalStates = []
         dfa = nfa
@@ -40,13 +70,12 @@ class NFA():
         for i in range(len(dfa[0])-1):
             newLine.append('')
         states = state.split(',')
-        print(states)
         for i in range(len(dfa)-1):
             strip = dfa[i+1][0].strip('->')
             strip = strip.strip('*')
             if strip in states:
                 for j in range(len(dfa[0])-1):
-                    if dfa[i+1][j+1] not in newLine[j+1]:
+                    if dfa[i+1][j+1] not in newLine[j+1] and dfa[i+1][j+1] != '-':
                         if f:
                             newLine[j+1] = newLine[j+1]+dfa[i+1][j+1]
                         else:
@@ -63,6 +92,6 @@ class NFA():
         
 '''
 teste = NFA()
-aaaa = [['X', 'a', 'b'], ['->q0', 'q1', 'q2'], ['q1', 'q2,q0', 'q1'], ['*q2', 'q1', 'q2']]
-print(teste.notEplisonTran(aaaa))
+aaaa = [['X', 'a', 'b', '&'], ['->q0', 'q1', 'q2', 'q1'], ['q1', 'q2,q0', 'q1', '-'], ['*q2', 'q1', 'q2', '-']]
+print(teste.epsilonTran(aaaa))
 '''
