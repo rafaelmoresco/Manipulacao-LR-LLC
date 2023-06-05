@@ -1,3 +1,5 @@
+from pprint import pprint
+
 class NFA():
 
     def __init__(self) -> None:
@@ -50,7 +52,7 @@ class NFA():
             else:
                 if item[1] not in translationDic[item[0]]:
                     translationDic[item[0]] = translationDic[item[0]] + ',' + item[1]
-        
+        # Funcao para fazer a uniao dos estados
         for i in range(len(nfa)-1):
             strip = nfa[i+1][0].strip('->')
             strip = strip.strip('*')
@@ -62,18 +64,37 @@ class NFA():
                         strip = nfa[k+1][0].strip('->')
                         strip = strip.strip('*')
                         if strip in unionStates and i != k and nfa[k+1][j+1] != '-':
+                            add = nfa[k+1][j+1].split(',')
+                            add.sort()
                             if nfa[i+1][j+1] == '-':
-                                nfa[i+1][j+1] = nfa[k+1][j+1]
+                                nfa[i+1][j+1] = ','.join(add)
                             else:
-                                nfa[i+1][j+1] = nfa[i+1][j+1] + ',' + nfa[k+1][j+1]
+                                for addition in add:
+                                    if addition not in nfa[i+1][j+1]:
+                                        nfa[i+1][j+1] = nfa[i+1][j+1] + ',' + addition
         # Troca um estado por seu epsilon fecho
         for i in range(len(nfa)-1):
             for j in range(len(nfa[0])):
+                final = False
+                initial = False
+                if '->' in nfa[i+1][j]:
+                    initial = True
+                if '*' in nfa[i+1][j]:
+                    final = True
                 strip = nfa[i+1][j].strip('->')
                 strip = strip.strip('*')
                 if strip in translationDic.keys():
-                    nfa[i+1][j] = nfa[i+1][j].replace(strip,strip+','+translationDic[strip])
-        print(nfa)
+                    add = translationDic[strip].split(',')
+                    strip = strip.split(',')
+                    for addition in add:
+                        if addition not in strip:
+                            strip.append(addition)
+                    strip.sort()
+                    nfa[i+1][j] = ','.join(strip)
+                    if final:
+                        nfa[i+1][j] = '*'+nfa[i+1][j]
+                    if initial:
+                        nfa[i+1][j] = '->'+nfa[i+1][j]
         # Executa o algoritmo sem epsilon transicoes
         return self.notEpsilonTran(nfa)
 
@@ -97,14 +118,13 @@ class NFA():
                         dfa.append(newSate)
         return dfa
                         
-
     def addState(self, dfa, state):
         newLine = []
         newLine.append(state)
         f = True
         final = False
         for i in range(len(dfa[0])-1):
-            newLine.append('')
+            newLine.append('-')
         states = state.split(',')
         for i in range(len(dfa)-1):
             strip = dfa[i+1][0].strip('->')
@@ -112,10 +132,12 @@ class NFA():
             if strip in states:
                 for j in range(len(dfa[0])-1):
                     if dfa[i+1][j+1] not in newLine[j+1] and dfa[i+1][j+1] != '-':
-                        if f:
+                        if f or newLine[j+1] == '-':
                             newLine[j+1] = newLine[j+1]+dfa[i+1][j+1]
                         else:
                             newLine[j+1] = newLine[j+1]+','+dfa[i+1][j+1]
+                        if '-' in newLine:
+                            newLine = list(map(lambda x: x.replace('-',''),newLine))
                 f = False
                     
                 if '*' in dfa[i+1][0]:
@@ -126,8 +148,9 @@ class NFA():
             newLine[0] = '*' + newLine[0]
         return newLine
         
-'''
+
 teste = NFA()
 aaaa = [['X', 'a', 'b', 'c', '&'], ['->*q0', 'q0', '-', '-', 'q1'], ['*q1', '-', 'q1', '-', 'q2'], ['*q2', '-', '-', 'q2', '-']]
-print(teste.epsilonTran(aaaa))
-'''
+questao7 = [['X', 'a', 'b', '&'], ['->q0', 'q0,q1', 'q2', 'q3'], ['*q1', 'q1', 'q3', 'q3'], ['*q2', '-', 'q2,q4', '-'], ['q3', 'q1,q3', 'q2,q3', 'q4'], ['q4', 'q4', 'q2', 'q3']]
+pprint(teste.epsilonTran(questao7))
+
