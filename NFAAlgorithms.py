@@ -16,15 +16,18 @@ class NFA():
 
     def epsilonTran(self, nfa):
         epsilon = []
+        finalStates = []
         # Descobre em qual coluna temos a & transicao
         for i in range(len(nfa[0])):
             if nfa[0][i] == '&':
                 epsilonPosition = i
         # Anota as transicoes listadas
         for i in range(len(nfa)-1):
-            strip = nfa[i+1][epsilonPosition].strip('*')
-            transitions = strip.split(',')
+            # Encontra o que está no &
+            transitions = nfa[i+1][epsilonPosition].split(',')
+            # Percorre pelos itens encontraods
             for item in transitions:
+                # Se o item existir, cria um par (a,b) onde a->b
                 if item != '-':
                     strip = nfa[i+1][0].strip('->')
                     strip = strip.strip('*')
@@ -84,26 +87,30 @@ class NFA():
                     initial = True
                 if '*' in nfa[i+1][j]:
                     final = True
+                    finalObject = nfa[i+1][j].strip('->')
+                    finalStates.append(finalObject.strip('*'))
                 strip = nfa[i+1][j].strip('->')
                 strip = strip.strip('*')
-                if strip in translationDic.keys():
-                    add = translationDic[strip].split(',')
-                    strip = strip.split(',')
-                    for addition in add:
-                        if addition not in strip:
-                            strip.append(addition)
-                    strip.sort()
-                    nfa[i+1][j] = ','.join(strip)
-                    if final:
-                        nfa[i+1][j] = '*'+nfa[i+1][j]
-                    if initial:
-                        nfa[i+1][j] = '->'+nfa[i+1][j]
+                strip = strip.split(',')
+                for replace in strip:
+                    if replace in translationDic.keys():
+                        add = translationDic[replace].split(',')
+                        #strip = strip.split(',')
+                        for addition in add:
+                            if addition not in strip:
+                                strip.append(addition)
+                        strip.sort()
+                        nfa[i+1][j] = ','.join(strip)
+                        if final:
+                            nfa[i+1][j] = '*'+nfa[i+1][j]
+                        if initial:
+                            nfa[i+1][j] = '->'+nfa[i+1][j]
         res = []
         [res.append(x) for x in nfa if x not in res]
         # Executa o algoritmo sem epsilon transicoes
-        return self.notEpsilonTran(res)
+        return self.notEpsilonTran(res,final=finalStates)
 
-    def notEpsilonTran(self, nfa):
+    def notEpsilonTran(self, nfa, final=[]):
         queue = []
         totalStates = []
         dfa = nfa
@@ -122,6 +129,18 @@ class NFA():
                         newSate = self.addState(dfa, state[i+1])
                         queue.append(newSate)
                         dfa.append(newSate)
+                    
+        for i in range(len(dfa)-1):
+            if '*' not in dfa[i+1][0]:
+                for finalState in final:
+                    if finalState in dfa[i+1][0]:
+                        if '->' in dfa[i+1][0]:
+                            strip = dfa[i+1][0].strip('->')
+                            dfa[i+1][0] = '->*'+strip
+                            break
+                        else:
+                            dfa[i+1][0] = '*'+dfa[i+1][0]
+                            break
         return dfa
                         
     def addState(self, dfa, state):
@@ -162,6 +181,6 @@ class NFA():
 teste = NFA()
 aaaa = [['X', 'a', 'b', 'c', '&'], ['->*q0', 'q0', '-', '-', 'q1'], ['*q1', '-', 'q1', '-', 'q2'], ['*q2', '-', '-', 'q2', '-']]
 questao7 = [['X', 'a', 'b', '&'], ['->q0', 'q0,q1', 'q2', 'q3'], ['*q1', 'q1', 'q3', 'q3'], ['*q2', '-', 'q2,q4', '-'], ['q3', 'q1,q3', 'q2,q3', 'q4'], ['q4', 'q4', 'q2', 'q3']]
-preset3 = [['X','a','b','&'],['1','-','2','3'],['2','1','2','-'],['3','2,3','3','-']]
+preset3 = [['X','a','b','&'],['1','-','2','3'],['*2','1','2','-'],['3','2,3','3','-']]
 pprint(teste.epsilonTran(questao7))
 '''
