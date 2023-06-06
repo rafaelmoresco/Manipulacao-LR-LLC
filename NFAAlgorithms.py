@@ -72,6 +72,9 @@ class NFA():
                                 for addition in add:
                                     if addition not in nfa[i+1][j+1]:
                                         nfa[i+1][j+1] = nfa[i+1][j+1] + ',' + addition
+                    sort = nfa[i+1][j+1].split(',')
+                    sort.sort()
+                    nfa[i+1][j+1] = ','.join(sort)
         # Troca um estado por seu epsilon fecho
         for i in range(len(nfa)-1):
             for j in range(len(nfa[0])):
@@ -95,8 +98,10 @@ class NFA():
                         nfa[i+1][j] = '*'+nfa[i+1][j]
                     if initial:
                         nfa[i+1][j] = '->'+nfa[i+1][j]
+        res = []
+        [res.append(x) for x in nfa if x not in res]
         # Executa o algoritmo sem epsilon transicoes
-        return self.notEpsilonTran(nfa)
+        return self.notEpsilonTran(res)
 
     def notEpsilonTran(self, nfa):
         queue = []
@@ -106,7 +111,8 @@ class NFA():
             queue.append(nfa[i+1])
             strip = dfa[i+1][0].strip('->')
             strip = strip.strip('*')
-            totalStates.append(strip)
+            if strip not in totalStates:
+                totalStates.append(strip)
         while queue:
             state = queue.pop(0)
             for i in range(len(state)-1):
@@ -121,25 +127,29 @@ class NFA():
     def addState(self, dfa, state):
         newLine = []
         newLine.append(state)
-        f = True
         final = False
         for i in range(len(dfa[0])-1):
             newLine.append('-')
         states = state.split(',')
+        states.sort()
         for i in range(len(dfa)-1):
             strip = dfa[i+1][0].strip('->')
             strip = strip.strip('*')
-            if strip in states:
+            strip = strip.split(',')
+            check =  all(item in states for item in strip)
+            if check:
                 for j in range(len(dfa[0])-1):
-                    if dfa[i+1][j+1] not in newLine[j+1] and dfa[i+1][j+1] != '-':
-                        if f or newLine[j+1] == '-':
-                            newLine[j+1] = newLine[j+1]+dfa[i+1][j+1]
-                        else:
-                            newLine[j+1] = newLine[j+1]+','+dfa[i+1][j+1]
-                        if '-' in newLine:
-                            newLine = list(map(lambda x: x.replace('-',''),newLine))
-                f = False
-                    
+                    add = dfa[i+1][j+1].split(',')
+                    add.sort()
+                    for adding in add:
+                        if adding not in newLine[j+1] and adding != '-':
+                            if newLine[j+1] == '-':
+                                newLine[j+1] = adding
+                            else:
+                                newLine[j+1] = newLine[j+1]+','+adding
+                                sort = newLine[j+1].split(',')
+                                sort.sort()
+                                newLine[j+1] = ','.join(sort) 
                 if '*' in dfa[i+1][0]:
                     final = True
                 else:
@@ -148,9 +158,10 @@ class NFA():
             newLine[0] = '*' + newLine[0]
         return newLine
         
-
+'''
 teste = NFA()
 aaaa = [['X', 'a', 'b', 'c', '&'], ['->*q0', 'q0', '-', '-', 'q1'], ['*q1', '-', 'q1', '-', 'q2'], ['*q2', '-', '-', 'q2', '-']]
 questao7 = [['X', 'a', 'b', '&'], ['->q0', 'q0,q1', 'q2', 'q3'], ['*q1', 'q1', 'q3', 'q3'], ['*q2', '-', 'q2,q4', '-'], ['q3', 'q1,q3', 'q2,q3', 'q4'], ['q4', 'q4', 'q2', 'q3']]
+preset3 = [['X','a','b','&'],['1','-','2','3'],['2','1','2','-'],['3','2,3','3','-']]
 pprint(teste.epsilonTran(questao7))
-
+'''

@@ -3,10 +3,10 @@
 Ideia de input:
     AF
 
-    X,a,b
-    ->A,B,C
-    B,B,C
-    *C,A,C
+    X|a|b
+    ->A|B|C
+    B|B|C
+    *C|A|C
 
     Gramatica
 
