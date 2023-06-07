@@ -1,35 +1,30 @@
 class GR():
-    def __init__(self, af):
-        self.af = af
+    def __init__(self):
+        self.af = 0
         self.n = []
         self.t = []
         self.s = 0
         self.f = []
     
-    def AFparaGR(self):
+    def AFparaGR(self, af):
+        #Seta o automato finito
+        self.af = af;
         # N = K (conjunto de variaveis nao terminais da gramatica = conjunto finito de estados)
         self.n = self.getConjuntoEstados()
-        #print(n)
         # T = Σ (conjunto de variáveis terminais = conjunto finito de símbolos de entrada)
         self.t = self.getConjuntoSimbolos()
-        #print(t)
         # S = q0 (símbolo inicial = estado inicial q0)
         self.s = self.getEstadoInicial()
-        #print(s)
         # Estados finais
         self.f = self.getEstadosFinais()
-        #print(f)
         # Definir P
-        # Agora começa o problema
         gr = self.af[1:]
         grFinal = []
-        #print(gr)
         aux = []
         for elemento in gr:
             aux.append(elemento[0])
             grFinal.append(aux)
             aux = []
-        #print(grFinal)
         for index, linha in enumerate(gr):
             for i in range(1, len(self.t)+1):
                 if (linha[i] == '-'):
@@ -51,7 +46,6 @@ class GR():
                 else:
                     print(" ," + linha[i], end="")
             print('\n')
-
 
     # Pega estados na primeira coluna apenas da matriz
     def getConjuntoEstados(self):
@@ -95,10 +89,9 @@ class GR():
                 estadoFinal = estado.replace("-", "").replace(">", "").replace("*", "")
                 conjuntoEstadosFinais.append(estadoFinal)
         return conjuntoEstadosFinais
-            
 
 comEpsilon = [['X', 'a', 'b', 'c', '&'], 
-        ['->*q0', 'q0', '-', '-', 'q1'], 
+        ['->*q0', 'q0', '-', '-', 'q1'],
         ['*q1', '-', 'q1', '-', 'q2'], 
         ['*q2', '-', '-', 'q2', '-']]
 
@@ -108,5 +101,13 @@ slide = [['X', 'a', 'b'],
         ['B', 'C', 'S'],
         ['C','B','A']]
 
-teste = GR(slide)
-teste.AFparaGR()
+questao7 = [['X', 'a', 'b'],
+ ['->q0q3q4', 'q0q1q3q4', 'q2q3q4'],
+ ['*q1q3q4', 'q1q3q4', 'q2q3q4'],
+ ['*q2', '-', 'q2q3q4'],
+ ['q3q4', 'q1q3q4', 'q2q3q4'],
+ ['*q0q1q3q4', 'q0q1q3q4', 'q2q3q4'],
+ ['*q2q3q4', 'q1q3q4', 'q2q3q4']]
+
+teste = GR()
+teste.AFparaGR(slide)
