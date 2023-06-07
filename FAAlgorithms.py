@@ -3,7 +3,7 @@ from pprint import pprint
 class NFA():
 
     def __init__(self) -> None:
-        self.temp = []
+        pass
 
     def NFAtoDFA(self, nfa):
         # Verifica se exitem Epsilon transicoes no automato
@@ -141,6 +141,7 @@ class NFA():
                         else:
                             dfa[i+1][0] = '*'+dfa[i+1][0]
                             break
+        dfa = self.renameStates(dfa)
         return dfa
                         
     def addState(self, dfa, state):
@@ -177,10 +178,21 @@ class NFA():
             newLine[0] = '*' + newLine[0]
         return newLine
         
-'''
+    def renameStates(self, dfa):
+        newStates = {}
+        for i in range(len(dfa)-1):
+            strip = dfa[i+1][0].strip('->')
+            strip = strip.strip('*')
+            newStates[strip] = 'S'+str(i)
+            dfa[i+1][0] = dfa[i+1][0].replace(strip, newStates[strip])
+        for i in range((len(dfa)-1)):
+            for j in range(len(dfa[0])-1):
+                if dfa[i+1][j+1] != '-':
+                    dfa[i+1][j+1] = dfa[i+1][j+1].replace(dfa[i+1][j+1], newStates[dfa[i+1][j+1]])
+        return dfa
+
 teste = NFA()
 aaaa = [['X', 'a', 'b', 'c', '&'], ['->*q0', 'q0', '-', '-', 'q1'], ['*q1', '-', 'q1', '-', 'q2'], ['*q2', '-', '-', 'q2', '-']]
 questao7 = [['X', 'a', 'b', '&'], ['->q0', 'q0,q1', 'q2', 'q3'], ['*q1', 'q1', 'q3', 'q3'], ['*q2', '-', 'q2,q4', '-'], ['q3', 'q1,q3', 'q2,q3', 'q4'], ['q4', 'q4', 'q2', 'q3']]
 preset3 = [['X','a','b','&'],['1','-','2','3'],['*2','1','2','-'],['3','2,3','3','-']]
 pprint(teste.epsilonTran(questao7))
-'''
