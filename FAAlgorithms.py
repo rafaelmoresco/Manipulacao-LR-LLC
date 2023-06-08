@@ -18,8 +18,7 @@ class NFA():
         transitions = []
         states = []
         finalStates = []
-        # Anota os estados
-        print(dfa)
+        # Anota os estadoss
         states, finalStates, transitions, initial = self.getProperties(dfa)
         # Remove estados inalcansáveis
         states, transitions = self.reachable(transitions, initial)
@@ -424,9 +423,10 @@ class NFA():
                 if dfa[i+1][j+1] != '-':
                     dfa[i+1][j+1] = dfa[i+1][j+1].replace(dfa[i+1][j+1], newStates[dfa[i+1][j+1]])
         return dfa
-
+'''
 teste = NFA()
 aaaa = [['X', 'a', 'b', 'c', '&'], ['->*q0', 'q0', '-', '-', 'q1'], ['*q1', '-', 'q1', '-', 'q2'], ['*q2', '-', '-', 'q2', '-']]
 questao7 = [['X', 'a', 'b', '&'], ['->q0', 'q0,q1', 'q2', 'q3'], ['*q1', 'q1', 'q3', 'q3'], ['*q2', '-', 'q2,q4', '-'], ['q3', 'q1,q3', 'q2,q3', 'q4'], ['q4', 'q4', 'q2', 'q3']]
 preset3 = [['X','a','b','&'],['->1','-','2','3'],['*2','1','2','-'],['3','2,3','3','-']]
-pprint(teste.minDFA(teste.epsilonTran(aaaa)))
+pprint(teste.minDFA(teste.epsilonTran(questao7)))
+'''
