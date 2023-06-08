@@ -14,6 +14,220 @@ class NFA():
 
         return dfa
 
+    def minDFA(self, dfa: list):
+        transitions = []
+        states = []
+        finalStates = []
+        # Anota os estados
+        for i in range(len(dfa)-1):
+            temp = dfa[i+1][0]
+            # Define o estado inicial
+            if temp[0] == '-' and temp[1] == '>':
+                temp = temp.strip('->')
+                if temp[0] == '*':
+                    temp = temp.strip('*')
+                initial = temp
+            # Define os estados finais
+            elif '*' == temp[0]:
+                temp = temp.strip('*')
+                finalStates.append(temp)
+            # Anota as transições
+            for j in range(len(dfa[0])-1):
+                # Percorre pelos itens encontraods
+                if dfa[i+1][j+1] != '-':
+                    transitions.append((temp, dfa[i+1][j+1], dfa[0][j+1]))
+        # Remove estados inalcansáveis
+        states, transitions = self.reachable(transitions, initial)
+        # Atualiza lista de estados finais
+        for state in finalStates:
+            if state not in states:
+                finalStates.remove(state)
+        finalStatesCopy = finalStates[:]
+        # Remove estados mortos
+        states, transitions = self.alive(transitions, finalStatesCopy)
+        # Remove inalcansáveis se criados no processo anterior
+        states, transitions = self.reachable(transitions, initial)
+        # Atualiza o Automato
+        dfa = self.dfaUpdate(dfa, states)
+        # Pega as transições do automato, agora incluindo as para o estado morto
+        transitionsEmpty = []
+        for i in range(len(dfa)-1):
+            temp = dfa[i+1][0]
+            temp = temp.strip('->')
+            temp = temp.strip('*')
+            for j in range(len(dfa[0])-1):
+                # Percorre pelos itens encontraods
+                transitionsEmpty.append((temp, dfa[i+1][j+1], dfa[0][j+1]))
+        # Remove estados equivalentes
+        self.equivalence(states, finalStates, transitionsEmpty, dfa)
+        return self.renameStates(dfa)
+        
+
+    def equivalence(self, states, finalStates, transitions, dfa):
+        helpList = []
+        equivalenceClass = []
+        destinationList = []
+        equivalenceClass.append(finalStates)
+        for state in states:
+            if state not in finalStates:
+                helpList.append(state)
+        equivalenceClass.append(helpList)
+        deadList = []
+        deadList.append('-')
+        equivalenceClass.append(deadList)
+        equivalent = True
+        while equivalent:
+            equivalent = False
+            # Percorre os simbolos do Automato
+            for symbol in dfa[0][1:]:
+                removeList = []
+                oldEquivalenceClass = equivalenceClass[:]
+                # Cria uma lista para salvar os destinos
+                destinationList = []
+                for eClass in oldEquivalenceClass:
+                    destinationList.append(-1)
+                # Percorre as classes de equivalencia
+                for eClass in oldEquivalenceClass:
+                    if eClass[0] == '-':
+                        continue
+                    # Percorre as transições para encontrar o destino do primeiro item da classe
+                    for tran in transitions:
+                        if tran[0] == eClass[0] and tran[2] == symbol:
+                            for destination in oldEquivalenceClass:
+                                if tran[1] in destination:
+                                    # Define o destino na lista de apoio
+                                    destinationList[oldEquivalenceClass.index(eClass)] = oldEquivalenceClass.index(destination)
+                                    break
+                            break
+                    # Variaveis para salvar as novas classes
+                    newClasses = []
+                    newDestinations = []
+                    # Olha os outros itens da classe
+                    for item in eClass[1:]:
+                        for tran in transitions:
+                            if tran[2] == symbol and tran[0] == item:
+                                for destination in oldEquivalenceClass:
+                                    # Se o destino for diferente da primeira na classe, desvia
+                                    if tran[1] in destination and destinationList[oldEquivalenceClass.index(eClass)] != oldEquivalenceClass.index(destination): 
+                                        equivalent = True
+                                        removeList.append(item)
+                                        # Se ainda não foi criado uma classe na lista de classes novas, uma é criada
+                                        if len(newClasses) == 0:
+                                            newClass = []
+                                            newDestination = []
+                                            newClass.append(item)
+                                            newDestination.append(oldEquivalenceClass.index(destination))
+                                            newClasses.append(newClass)
+                                            newDestinations.append(newDestination)
+                                            break
+                                        else:
+                                            exists = False
+                                            # Percorre as os destinos novos e procura se encontra uma nova classe para o mesmo destino
+                                            for new in newDestinations:
+                                                if oldEquivalenceClass.index(destination) == new:
+                                                    newClasses[newDestinations.index(new)].append(item)
+                                                    exists = True
+                                                    break
+                                            # Se não econtrar, cria uma nova
+                                            if not exists:
+                                                newClass = []
+                                                newDestination = []
+                                                newClass.append(item)
+                                                newDestination.append(oldEquivalenceClass.index(destination))
+                                                newClasses.append(newClass)
+                                                newDestinations.append(newDestination)
+                                            break
+                                else:
+                                    break
+                    # Remove os itens que não pertencem mais a uma classe
+                    for eClass in equivalenceClass:
+                        for item in eClass:
+                            if item in removeList:
+                                eClass.remove(item)
+                                removeList.remove(item) 
+                    # Adiciona os itens em suas novas classes
+                    for item in newClasses:
+                        equivalenceClass.append(item)
+        # Transforma as classes de equivalencia em string
+        helperList = []
+        for eClass in equivalenceClass:
+            equivalenceClass[equivalenceClass.index(eClass)] = ','.join(eClass)
+            helperList.append(True)
+        # Troca estados pelos estados equivalentes e remove estados repetidos
+        for state in dfa[1:]:
+            notRemoved = True
+            sState = state[0].strip('->')
+            sState = sState.strip('*')
+            for eClass in equivalenceClass:
+                if eClass == '-':
+                    continue
+                if sState in eClass:
+                    if helperList[equivalenceClass.index(eClass)]:
+                        dfa[dfa.index(state)][0] = dfa[dfa.index(state)][0].replace(sState, eClass)
+                        helperList[equivalenceClass.index(eClass)] = False
+                    else:
+                        dfa.remove(state)
+                        notRemoved = False
+                    break
+            if notRemoved:
+                for j in range(len(dfa[0])-1):
+                    if dfa[dfa.index(state)][j+1] == '-':
+                        continue
+                    for eClass in equivalenceClass:
+                        if eClass == '-':
+                            continue
+                        strip = dfa[dfa.index(state)][j+1].strip('->')
+                        strip = strip.strip('*')
+                        if strip in eClass:
+                            dfa[dfa.index(state)][j+1] = dfa[dfa.index(state)][j+1].replace(strip, eClass)
+        return dfa
+
+
+                        
+    
+    def dfaUpdate(self, dfa, states):
+        for item in dfa[1:]:
+            strip = item[0].strip('->')
+            strip = strip.strip('*')
+            if strip not in states:
+                dfa.remove(item)
+            else:
+                for tran in item[1:]:
+                    if tran != '-' and tran not in states:
+                        tran = '-'
+        return dfa
+
+    def reachable(self, transitions, initial):
+        reachableStates = []
+        reachableTransitions = []
+        reachableStates.append(initial)
+        reachable = True
+        while reachable:
+            reachable = False
+            for item in transitions:
+                if item[0] in reachableStates:
+                    if item[1] not in reachableStates:    
+                        reachableStates.append(item[1])
+                    reachableTransitions.append(item)
+                    transitions.remove(item)
+                    reachable = True
+        return reachableStates, reachableTransitions
+        
+    def alive(self, transitions, finalStates):
+        aliveStates = finalStates
+        aliveTransitions = []
+        alive = True
+        while alive:
+            alive = False
+            for item in transitions:
+                if item[1] in aliveStates:
+                    if item[0] not in aliveStates:
+                        aliveStates.append(item[0])
+                    aliveTransitions.append(item)
+                    transitions.remove(item)
+                    alive = True
+        return aliveStates, aliveTransitions        
+
     def epsilonTran(self, nfa):
         epsilon = []
         finalStates = []
@@ -190,9 +404,10 @@ class NFA():
                 if dfa[i+1][j+1] != '-':
                     dfa[i+1][j+1] = dfa[i+1][j+1].replace(dfa[i+1][j+1], newStates[dfa[i+1][j+1]])
         return dfa
-
+'''
 teste = NFA()
 aaaa = [['X', 'a', 'b', 'c', '&'], ['->*q0', 'q0', '-', '-', 'q1'], ['*q1', '-', 'q1', '-', 'q2'], ['*q2', '-', '-', 'q2', '-']]
 questao7 = [['X', 'a', 'b', '&'], ['->q0', 'q0,q1', 'q2', 'q3'], ['*q1', 'q1', 'q3', 'q3'], ['*q2', '-', 'q2,q4', '-'], ['q3', 'q1,q3', 'q2,q3', 'q4'], ['q4', 'q4', 'q2', 'q3']]
-preset3 = [['X','a','b','&'],['1','-','2','3'],['*2','1','2','-'],['3','2,3','3','-']]
-pprint(teste.epsilonTran(questao7))
+preset3 = [['X','a','b','&'],['->1','-','2','3'],['*2','1','2','-'],['3','2,3','3','-']]
+pprint(teste.minDFA(teste.epsilonTran(aaaa)))
+'''
