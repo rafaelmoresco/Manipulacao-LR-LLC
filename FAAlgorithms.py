@@ -19,23 +19,8 @@ class NFA():
         states = []
         finalStates = []
         # Anota os estados
-        for i in range(len(dfa)-1):
-            temp = dfa[i+1][0]
-            # Define o estado inicial
-            if temp[0] == '-' and temp[1] == '>':
-                temp = temp.strip('->')
-                if temp[0] == '*':
-                    temp = temp.strip('*')
-                initial = temp
-            # Define os estados finais
-            elif '*' == temp[0]:
-                temp = temp.strip('*')
-                finalStates.append(temp)
-            # Anota as transições
-            for j in range(len(dfa[0])-1):
-                # Percorre pelos itens encontraods
-                if dfa[i+1][j+1] != '-':
-                    transitions.append((temp, dfa[i+1][j+1], dfa[0][j+1]))
+        print(dfa)
+        states, finalStates, transitions, initial = self.getProperties(dfa)
         # Remove estados inalcansáveis
         states, transitions = self.reachable(transitions, initial)
         # Atualiza lista de estados finais
@@ -47,6 +32,10 @@ class NFA():
         states, transitions = self.alive(transitions, finalStatesCopy)
         # Remove inalcansáveis se criados no processo anterior
         states, transitions = self.reachable(transitions, initial)
+        # Atualiza lista de estados finais
+        for state in finalStates:
+            if state not in states:
+                finalStates.remove(state)
         # Atualiza o Automato
         dfa = self.dfaUpdate(dfa, states)
         # Pega as transições do automato, agora incluindo as para o estado morto
@@ -62,6 +51,39 @@ class NFA():
         self.equivalence(states, finalStates, transitionsEmpty, dfa)
         return self.renameStates(dfa)
         
+    def getProperties(self, dfa, empty=False):
+        finalStates = []
+        transitions = []
+        states = []
+        for i in range(len(dfa)-1):
+            temp = dfa[i+1][0]
+            # Define o estado inicial
+            if temp[0] == '-' and temp[1] == '>':
+                temp = temp.strip('->')
+                if temp[0] == '*':
+                    temp = temp.strip('*')
+                    finalStates.append(temp)
+                initial = temp
+                states.append(temp)
+            # Define os estados finais
+            elif '*' == temp[0]:
+                temp = temp.strip('*')
+                finalStates.append(temp)
+                states.append(temp)
+            else:
+                states.append(temp)
+            # Anota as transições
+            for j in range(len(dfa[0])-1):
+                # Percorre pelos itens encontraods
+                if empty or dfa[i+1][j+1] != '-':
+                    transitions.append((temp, dfa[i+1][j+1], dfa[0][j+1]))
+        return states, finalStates, transitions, initial
+
+    def dfaUnion(self, dfa1, dfa2):
+        pass
+
+    def dfaIntersection(self, dfa1, dfa2):
+        pass
 
     def equivalence(self, states, finalStates, transitions, dfa):
         helpList = []
@@ -71,7 +93,8 @@ class NFA():
         for state in states:
             if state not in finalStates:
                 helpList.append(state)
-        equivalenceClass.append(helpList)
+        if helpList != []:
+            equivalenceClass.append(helpList)
         deadList = []
         deadList.append('-')
         equivalenceClass.append(deadList)
@@ -180,10 +203,7 @@ class NFA():
                         strip = strip.strip('*')
                         if strip in eClass:
                             dfa[dfa.index(state)][j+1] = dfa[dfa.index(state)][j+1].replace(strip, eClass)
-        return dfa
-
-
-                        
+        return dfa                 
     
     def dfaUpdate(self, dfa, states):
         for item in dfa[1:]:
@@ -404,10 +424,9 @@ class NFA():
                 if dfa[i+1][j+1] != '-':
                     dfa[i+1][j+1] = dfa[i+1][j+1].replace(dfa[i+1][j+1], newStates[dfa[i+1][j+1]])
         return dfa
-'''
+
 teste = NFA()
 aaaa = [['X', 'a', 'b', 'c', '&'], ['->*q0', 'q0', '-', '-', 'q1'], ['*q1', '-', 'q1', '-', 'q2'], ['*q2', '-', '-', 'q2', '-']]
 questao7 = [['X', 'a', 'b', '&'], ['->q0', 'q0,q1', 'q2', 'q3'], ['*q1', 'q1', 'q3', 'q3'], ['*q2', '-', 'q2,q4', '-'], ['q3', 'q1,q3', 'q2,q3', 'q4'], ['q4', 'q4', 'q2', 'q3']]
 preset3 = [['X','a','b','&'],['->1','-','2','3'],['*2','1','2','-'],['3','2,3','3','-']]
 pprint(teste.minDFA(teste.epsilonTran(aaaa)))
-'''
