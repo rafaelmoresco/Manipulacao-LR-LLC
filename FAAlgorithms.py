@@ -79,10 +79,23 @@ class NFA():
         return states, finalStates, transitions, initial
 
     def dfaUnion(self, dfa1, dfa2):
+        d1States, d1FStates, d1Transitions, d1Initial = self.getProperties(dfa1)
+        d2States, d2FStates, d2Transitions, d2Initial = self.getProperties(dfa2)
+        newDStates = self.cartesean(d1States, d2States)
         pass
 
     def dfaIntersection(self, dfa1, dfa2):
+        d1States, d1FStates, d1Transitions, d1Initial = self.getProperties(dfa1)
+        d2States, d2FStates, d2Transitions, d2Initial = self.getProperties(dfa2)
+        newDStates = self.cartesean(d1States, d2States)
         pass
+    
+    def cartesean(self, d1S, d2S):
+        dNewS = []
+        for s1 in d1S:
+            for s2 in d2S:
+                dNewS.append((s1,s2))
+        return dNewS
 
     def equivalence(self, states, finalStates, transitions, dfa):
         helpList = []
