@@ -8,7 +8,7 @@ class GR():
     
     def AFparaGR(self, af):
         #Seta o automato finito
-        self.af = af;
+        self.af = af
         # N = K (conjunto de variaveis nao terminais da gramatica = conjunto finito de estados)
         self.n = self.getConjuntoEstados()
         # T = Σ (conjunto de variáveis terminais = conjunto finito de símbolos de entrada)

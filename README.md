@@ -3,7 +3,7 @@
 Ideia de input:
     AF
 
-    X|a|b
+    _|a|b
     ->A|B|C
     B|B|C
     *C|A|C
