@@ -1,5 +1,4 @@
 from typing import List, Tuple, Set, Callable, List
-import aux
 
 class FiniteAutomata:
     
@@ -135,28 +134,61 @@ class FiniteAutomata:
 
     def __epsilonRemoval(self) -> None:
         
-        ###Apenas o algoritmo das funções
+        ### Epsilon fecho - Talvez possa ser uma função propria
         # &* é um dicionario de sets
         epsilonClosure: dict = {}
         #Cria um dicionario &*
         for state in self.__states:
             newSet = set()
-            epsilonClosure[state] = newSet.add(state)
-        changed = True
-        while changed:
-            changed = False
+            newSet.add(state)
+            epsilonClosure[state] = newSet
+        while True:
+            oldClosure = epsilonClosure.copy()
             # Percorre as transiões e procura & transições
             for (initial, to, transition) in self.__transitions:
                 if transition == '&':
-                    # Percorre os itens em &* e procura 
+                    # Percorre os itens em &* e procura a chave
                     for key, content in epsilonClosure.items():
                         if key == initial:
-                            
-                            changed = True
+                            epsilonClosure[initial] = epsilonClosure[initial].union(epsilonClosure[to])
                             break
-                pass
-            
-    
+            if oldClosure == epsilonClosure:
+                break
+        print('\nEpsilon fecho ',epsilonClosure,'\n')
+        ### Substituição dos estados - Gambiarra pura
+        newStatesSet = set()
+        for state in self.__states:
+            newStatesSet.add(frozenset(epsilonClosure[state]))
+        newStatesString = set()
+        for state in newStatesSet:
+            lista = list(state)
+            lista.sort()
+            newStatesString.add(','.join(lista))
+        print('Estados novos ',newStatesString,'\n')
+        ### União das transições - Talvez possa ser uma função propria
+        newTranitions = []
+        for (initial, to, transition) in self.__transitions:
+            if transition != '&':
+                for stateFrom in newStatesString:
+                    for stateTo in newStatesString:
+                        if initial in stateFrom and to in stateTo and (stateFrom,stateTo,transition) not in newTranitions:
+                            newTranitions.append((stateFrom,stateTo,transition))
+
+        for (initial, to, transition) in newTranitions:
+            for (initial2, to2, transition2) in newTranitions:
+                if transition == transition2 and initial == initial2 and to != to2:
+                    a = set(to.split(','))
+                    a.union(set(to2.split(',')))
+                    a = list(a)
+                    a.sort()
+                    if (initial,','.join(a),transition) not in newTranitions:
+                        newTranitions.append((initial,','.join(a),transition))
+                        newTranitions.remove((initial,to,transition))
+                        newTranitions.remove((initial2,to2,transition2))
+                            
+        print('Transicoes novas ',newTranitions)
+
+
     def __determinismRemoval(self) -> None:
         pass
 
