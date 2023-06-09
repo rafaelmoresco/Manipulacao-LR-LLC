@@ -1,24 +1,20 @@
 class GR():
     def __init__(self):
-        self.af = 0
-        self.n = []
-        self.t = []
-        self.s = 0
-        self.f = []
+        pass
     
     def AFparaGR(self, af):
         #Seta o automato finito
-        self.af = af
+        af = af;
         # N = K (conjunto de variaveis nao terminais da gramatica = conjunto finito de estados)
-        self.n = self.getConjuntoEstados()
+        n = self.getConjuntoEstados(af)
         # T = Σ (conjunto de variáveis terminais = conjunto finito de símbolos de entrada)
-        self.t = self.getConjuntoSimbolos()
+        t = self.getConjuntoSimbolos(af)
         # S = q0 (símbolo inicial = estado inicial q0)
-        self.s = self.getEstadoInicial()
+        s = self.getEstadoInicial(af)
         # Estados finais
-        self.f = self.getEstadosFinais()
+        f = self.getEstadosFinais(af)
         # Definir P
-        gr = self.af[1:]
+        gr = af[1:]
         grFinal = []
         aux = []
         for elemento in gr:
@@ -26,15 +22,17 @@ class GR():
             grFinal.append(aux)
             aux = []
         for index, linha in enumerate(gr):
-            for i in range(1, len(self.t)+1):
-                if (linha[i] == '-'):
-                    break
-                else:
-                    prod = self.af[0][i] + linha[i]
+            for i in range(1, len(t)+1):
+                if(linha[i] != '-'):
+                    prod = af[0][i] + linha[i]
                     grFinal[index].append(prod)
-                    if (linha[i] in self.f):
-                        grFinal[index].append(self.af[0][i])
+                    if (linha[i] in f):
+                        grFinal[index].append(af[0][i])
         self.printGR(grFinal)
+    
+    def GRparaAF(self):
+        # Caminho contrário puta merda mas fazer o que
+        pass
 
     # Printa a GR formatada
     def printGR(self, grFinal):
@@ -48,10 +46,10 @@ class GR():
             print('\n')
 
     # Pega estados na primeira coluna apenas da matriz
-    def getConjuntoEstados(self):
+    def getConjuntoEstados(self, af):
         conjuntoEstados = []
         conjuntoEstadosTotais = []
-        for linha in self.af:
+        for linha in af:
             conjuntoEstados.append(linha[0])
         conjuntoEstados.pop(0)
         for estado in conjuntoEstados:
@@ -60,17 +58,17 @@ class GR():
         return conjuntoEstadosTotais
     
     # Pega os simbolos da primeira linha da matriz
-    def getConjuntoSimbolos(self):
+    def getConjuntoSimbolos(self, af):
         conjuntoSimbolosFinal = []
-        for simbolo in self.af[0]:
+        for simbolo in af[0]:
             if(simbolo != 'X' and simbolo != '&'):
                 conjuntoSimbolosFinal.append(simbolo)
         return conjuntoSimbolosFinal 
 
     # Pega simbolo inicial
-    def getEstadoInicial(self):
+    def getEstadoInicial(self, af):
         conjuntoEstados = []
-        for linha in self.af:
+        for linha in af:
             conjuntoEstados.append(linha[0])
         conjuntoEstados.pop(0)
         for estado in conjuntoEstados:
@@ -78,10 +76,10 @@ class GR():
                 return estado.replace("-", "").replace(">", "").replace("*", "")
             
     # Pega estados finais
-    def getEstadosFinais(self):
+    def getEstadosFinais(self, af):
         conjuntoEstados = []
         conjuntoEstadosFinais = []
-        for linha in self.af:
+        for linha in af:
             conjuntoEstados.append(linha[0])
         conjuntoEstados.pop(0)
         for estado in conjuntoEstados:
@@ -102,12 +100,12 @@ slide = [['X', 'a', 'b'],
         ['C','B','A']]
 
 questao7 = [['X', 'a', 'b'],
- ['->q0q3q4', 'q0q1q3q4', 'q2q3q4'],
- ['*q1q3q4', 'q1q3q4', 'q2q3q4'],
- ['*q2', '-', 'q2q3q4'],
- ['q3q4', 'q1q3q4', 'q2q3q4'],
- ['*q0q1q3q4', 'q0q1q3q4', 'q2q3q4'],
- ['*q2q3q4', 'q1q3q4', 'q2q3q4']]
+ ['->S0', 'S4', 'S5'],
+ ['*S1', 'S1', 'S5'],
+ ['*S2', '-', 'S5'],
+ ['S3', 'S1', 'S5'],
+ ['*S4', 'S4', 'S5'],
+ ['*S5', 'S1', 'S5']]
 
 teste = GR()
-teste.AFparaGR(slide)
+teste.AFparaGR(questao7)
