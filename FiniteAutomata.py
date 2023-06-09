@@ -166,15 +166,38 @@ class FiniteAutomata:
             newStatesString.add(','.join(lista))
         print('Estados novos ',newStatesString,'\n')
         ### União das transições - Talvez possa ser uma função propria
-        newTranitions = []
+        newTranitions = set()
         for (initial, to, transition) in self.__transitions:
             if transition != '&':
-                for stateFrom in newStatesString:
+                initialSet = set(initial.split(','))
+                toSet = set(to.split(','))
+                inicialAdd = set()
+                toAdd = set()
+                for state in initialSet:
+                    if state in epsilonClosure.keys():
+                        inicialAdd = inicialAdd.union(epsilonClosure[state])
+                for state in toSet:
+                    if state in epsilonClosure.keys():
+                        toAdd = toAdd.union(epsilonClosure[state])
+                newInitial = list(initialSet.union(inicialAdd))
+                newInitial.sort()
+                newTo = list(toSet.union(toAdd))
+                newTo.sort()
+                newTranitions.add((','.join(newInitial),','.join(newTo), transition))
+        newTranitionsCopy = newTranitions.copy()
+        for (initial, to, transition) in newTranitionsCopy:
+            for (initial2, to2, transition2) in newTranitionsCopy:
+                if initial == initial2 and transition == transition2:
+                    if to != to2 and to in to2 and (initial,to,transition) in newTranitions:
+                        newTranitions.remove((initial,to,transition))
+                    if to != to2 and to2 in to and (initial2,to2,transition) in newTranitions:
+                        newTranitions.remove((initial2,to2,transition))
+                """ for stateFrom in newStatesString:
                     for stateTo in newStatesString:
                         if initial in stateFrom and to in stateTo and (stateFrom,stateTo,transition) not in newTranitions:
-                            newTranitions.append((stateFrom,stateTo,transition))
+                            newTranitions.append((stateFrom,stateTo,transition)) """
 
-        for (initial, to, transition) in newTranitions:
+        """ for (initial, to, transition) in newTranitions:
             for (initial2, to2, transition2) in newTranitions:
                 if transition == transition2 and initial == initial2 and to != to2:
                     a = set(to.split(','))
@@ -184,7 +207,7 @@ class FiniteAutomata:
                     if (initial,','.join(a),transition) not in newTranitions:
                         newTranitions.append((initial,','.join(a),transition))
                         newTranitions.remove((initial,to,transition))
-                        newTranitions.remove((initial2,to2,transition2))
+                        newTranitions.remove((initial2,to2,transition2)) """
                             
         print('Transicoes novas ',newTranitions)
 
