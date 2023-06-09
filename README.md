@@ -8,6 +8,8 @@ Ideia de input:
     B|B|C
     *C|A|C
 
+    Se o estado é composto, ex: {q0,q1}, deve estar em ordem crescente.
+
     Gramatica
 
     ->S,aA,bB

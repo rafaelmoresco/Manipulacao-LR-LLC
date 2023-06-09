@@ -1,8 +1,8 @@
-from typing import List, Tuple, Set, Callable, List
+from typing import List, Tuple, Set, Dict
 
 class FiniteAutomata:
     
-    def __init__(self, states: Set[str], alphabet: Set[str], transitions: List[Tuple[str, str, str]], initialState: str, acceptanceStates: Set[str]) -> None:
+    def __init__(self, states: Set[str], alphabet: Set[str], transitions: Set[Tuple[str, str, str]], initialState: str, acceptanceStates: Set[str]) -> None:
         '''
         @param transitions Lista de tuplas em que cada tupla contem, nessa ordem: estado de, estado para, transita por
         '''
@@ -80,7 +80,6 @@ class FiniteAutomata:
 
         return [value for _, value in equivalenceClassesDict.items() if value != []]
             
-    
     def __removeEquivalents(self):
         statesNotFinal = []
         equivalenceClasses: List[set] = []
@@ -98,8 +97,8 @@ class FiniteAutomata:
                     equivalenceClassesCpy = equivalenceClasses.copy()
                     equivalenceClasses.remove(stateGroup)
                     equivalenceClasses.extend(self.__splitClassesOfEquivalence(equivalenceClassesCpy, stateGroup, symbol))
-
-            if equivalenceClasses == oldEquivalenceClasses:
+            
+            if sorted(equivalenceClasses) == sorted(oldEquivalenceClasses):
                 break
 
         # Atualiza o automato com os novos estados
@@ -132,87 +131,89 @@ class FiniteAutomata:
 
         self.__states = set([','.join(group) for group in equivalenceClasses])
 
-    def __epsilonRemoval(self) -> None:
+    def __transitionsToDict(self) -> Dict[str, List[Set[Tuple[str, str, str]]]]:
+        transitions = {}
+        for (initial, to, transition) in self.__transitions:
+            if not transitions.get(initial):
+                transitions[initial] = [(initial, to, transition)]
+            else:
+                transitions[initial].append((initial, to, transition))
+        return transitions
+
+    def __obtainNewTransitions(self, newState: str) -> Set[Tuple[str, str, str]]:
+        sortedNewStates = sorted(newState.split(','))
+        transitionsDict = self.__transitionsToDict()
         
-        ### Epsilon fecho - Talvez possa ser uma função propria
-        # &* é um dicionario de sets
-        epsilonClosure: dict = {}
-        #Cria um dicionario &*
-        for state in self.__states:
-            newSet = set()
-            newSet.add(state)
-            epsilonClosure[state] = newSet
+        newTransitions = set()
+        for symbol in self.__alphabet:
+            if symbol == '&': continue
+            newTransition = set()
+            for state in sortedNewStates:
+                for (_, tran, sym) in transitionsDict[state]:
+                    if symbol == sym:
+                        [newTransition.add(t) for t in tran.split(',')]
+                
+            newTransition = ','.join(sorted(list(newTransition)))
+            if newTransition:
+                newTransitions.add((','.join(sortedNewStates), newTransition, symbol))
+        
+        return newTransitions
+
+    def __epsilonRemoval(self) -> None:
+        # Dicionario cuja chave é o estado e o valor é o epsilon fecho desse estado
+        # Inicializa adicionando o proprio estado ao epsilon fecho
+        epsilonClosure: Dict[str, set] = {state: {state} for state in self.__states}
+        
+        # Adiciona as transicoes restantes de epsilon-fecho para cada estado
         while True:
             oldClosure = epsilonClosure.copy()
             # Percorre as transiões e procura & transições
             for (initial, to, transition) in self.__transitions:
                 if transition == '&':
                     # Percorre os itens em &* e procura a chave
-                    for key, content in epsilonClosure.items():
-                        if key == initial:
-                            epsilonClosure[initial] = epsilonClosure[initial].union(epsilonClosure[to])
-                            break
+                    epsilonClosure[initial] = epsilonClosure[initial].union(epsilonClosure[to])
             if oldClosure == epsilonClosure:
                 break
-        print('\nEpsilon fecho ',epsilonClosure,'\n')
-        ### Substituição dos estados - Gambiarra pura
-        newStatesSet = set()
-        for state in self.__states:
-            newStatesSet.add(frozenset(epsilonClosure[state]))
-        newStatesString = set()
-        for state in newStatesSet:
-            lista = list(state)
-            lista.sort()
-            newStatesString.add(','.join(lista))
-        print('Estados novos ',newStatesString,'\n')
-        ### União das transições - Talvez possa ser uma função propria
-        newTranitions = set()
-        for (initial, to, transition) in self.__transitions:
-            if transition != '&':
-                initialSet = set(initial.split(','))
-                toSet = set(to.split(','))
-                inicialAdd = set()
-                toAdd = set()
-                for state in initialSet:
-                    if state in epsilonClosure.keys():
-                        inicialAdd = inicialAdd.union(epsilonClosure[state])
-                for state in toSet:
-                    if state in epsilonClosure.keys():
-                        toAdd = toAdd.union(epsilonClosure[state])
-                newInitial = list(initialSet.union(inicialAdd))
-                newInitial.sort()
-                newTo = list(toSet.union(toAdd))
-                newTo.sort()
-                newTranitions.add((','.join(newInitial),','.join(newTo), transition))
-        newTranitionsCopy = newTranitions.copy()
-        for (initial, to, transition) in newTranitionsCopy:
-            for (initial2, to2, transition2) in newTranitionsCopy:
-                if initial == initial2 and transition == transition2:
-                    if to != to2 and to in to2 and (initial,to,transition) in newTranitions:
-                        newTranitions.remove((initial,to,transition))
-                    if to != to2 and to2 in to and (initial2,to2,transition) in newTranitions:
-                        newTranitions.remove((initial2,to2,transition))
-                """ for stateFrom in newStatesString:
-                    for stateTo in newStatesString:
-                        if initial in stateFrom and to in stateTo and (stateFrom,stateTo,transition) not in newTranitions:
-                            newTranitions.append((stateFrom,stateTo,transition)) """
+        
+        self.__initialState = ','.join(sorted(list(epsilonClosure[self.__initialState])))
+        
+        newStates = set()
+        processedStates = set()
+        newTransitions = set()
+        # Itera pela primeira vez, substituindo estados por epsilon-fecho e gerando novas transicoes
+        for state in epsilonClosure:
+            for (newInitial, newTo, symbol) in self.__obtainNewTransitions(','.join(epsilonClosure[state])):
+                newTransitions.add((newInitial, newTo, symbol))
+                processedStates.add(newInitial)
+                if newTo not in processedStates:
+                    newStates.add(newTo)
 
-        """ for (initial, to, transition) in newTranitions:
-            for (initial2, to2, transition2) in newTranitions:
-                if transition == transition2 and initial == initial2 and to != to2:
-                    a = set(to.split(','))
-                    a.union(set(to2.split(',')))
-                    a = list(a)
-                    a.sort()
-                    if (initial,','.join(a),transition) not in newTranitions:
-                        newTranitions.append((initial,','.join(a),transition))
-                        newTranitions.remove((initial,to,transition))
-                        newTranitions.remove((initial2,to2,transition2)) """
-                            
-        print('Transicoes novas ',newTranitions)
+        # Enquanto houverem novos estados, gera novas transicoes
+        while newStates:
+            for (newInitial, newTo, symbol) in self.__obtainNewTransitions(newStates.pop()):
+                newTransitions.add((newInitial, newTo, symbol))
+                processedStates.add(newInitial)
+                if newTo not in processedStates:
+                    newStates.add(newTo)
 
+        # Substitui transicoes originais pelas novas geradas a partir de epsilon fecho
+        self.__transitions = newTransitions
 
-    def __determinismRemoval(self) -> None:
+        # remove epsilon do alfabeto
+        self.__alphabet.remove('&')
+
+        # substitui o resto do automato (estados, estados de aceitacao)
+        self.__states = set()
+        oldAcceptanceStates = self.__acceptanceStates
+        self.__acceptanceStates = set()
+        for (initial, to, symbol) in self.__transitions:
+            self.__states.add(initial)
+            for state in initial.split(','):
+                if state in oldAcceptanceStates:
+                    self.__acceptanceStates.add(initial)
+                    break
+
+    def __indeterminismRemoval(self) -> None:
         pass
 
     ######################################### PUBLIC #########################################
@@ -243,4 +244,4 @@ class FiniteAutomata:
     def determinize(self) -> 'FiniteAutomata':
         if '&' in self.__alphabet:
             self.__epsilonRemoval()
-        self.__determinismRemoval()
+        self.__indeterminismRemoval()
