@@ -133,6 +133,33 @@ class FiniteAutomata:
 
         self.__states = set([','.join(group) for group in equivalenceClasses])
 
+    def __epsilonRemoval(self) -> None:
+        
+        ###Apenas o algoritmo das funções
+        # &* é um dicionario de sets
+        epsilonClosure: dict = {}
+        #Cria um dicionario &*
+        for state in self.__states:
+            newSet = set()
+            epsilonClosure[state] = newSet.add(state)
+        changed = True
+        while changed:
+            changed = False
+            # Percorre as transiões e procura & transições
+            for (initial, to, transition) in self.__transitions:
+                if transition == '&':
+                    # Percorre os itens em &* e procura 
+                    for key, content in epsilonClosure.items():
+                        if key == initial:
+                            
+                            changed = True
+                            break
+                pass
+            
+    
+    def __determinismRemoval(self) -> None:
+        pass
+
     ######################################### PUBLIC #########################################
 
     def isDeterministic(self) -> bool:
@@ -157,3 +184,8 @@ class FiniteAutomata:
         # Faz as classes de equivalencia
         self.__removeEquivalents()
         return self
+
+    def determinize(self) -> 'FiniteAutomata':
+        if '&' in self.__alphabet:
+            self.__epsilonRemoval()
+        self.__determinismRemoval()
