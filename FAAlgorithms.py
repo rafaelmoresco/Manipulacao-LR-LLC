@@ -1,4 +1,6 @@
 from pprint import pprint
+from typing import List, Tuple, Set, Dict, ClassVar
+from FiniteAutomata import FiniteAutomata
 
 class NFA():
 
@@ -78,24 +80,52 @@ class NFA():
                     transitions.append((temp, dfa[i+1][j+1], dfa[0][j+1]))
         return states, finalStates, transitions, initial
 
-    def dfaUnion(self, dfa1, dfa2):
-        d1States, d1FStates, d1Transitions, d1Initial = self.getProperties(dfa1)
-        d2States, d2FStates, d2Transitions, d2Initial = self.getProperties(dfa2)
-        newDStates = self.cartesean(d1States, d2States)
-        pass
+    def dfaUnion(self, d1: FiniteAutomata, d2: FiniteAutomata) -> FiniteAutomata:
+        newDStates = self.carteseanStates(d1.states, d2.states)
+        newDAlphabet = d1.alphabet.union(d2.alphabet)
+        newDInitialState = 'A1'+d1.initialState+';'+'A2'+d2.initialState
+        newDAcceptanceStates = set()
+        for state in newDStates:
+            splitedState = state.split(';')
+            if splitedState[0].strip('A1') in d1.acceptanceStates or splitedState[1].strip('A2') in d2.acceptanceStates:
+                newDAcceptanceStates.add(state)
+        newDTransitions = self.carteseanTransitions(d1.transitions,d2.transitions,newDStates)
+        new = FiniteAutomata(newDStates, newDAlphabet, newDTransitions, newDInitialState, newDAcceptanceStates)
+        return new
 
-    def dfaIntersection(self, dfa1, dfa2):
-        d1States, d1FStates, d1Transitions, d1Initial = self.getProperties(dfa1)
-        d2States, d2FStates, d2Transitions, d2Initial = self.getProperties(dfa2)
-        newDStates = self.cartesean(d1States, d2States)
-        pass
+
+        
+
+
+    def dfaIntersection(self, d1: FiniteAutomata, d2: FiniteAutomata) -> FiniteAutomata:
+        newDStates = self.cartesean(d1.states, d2.states)
+        newDAlphabet = d1.alphabet.union(d2.alphabet)
+        newDInitialState = 'A1'+d1.initialState+';'+'A2'+d2.initialState
+        newDAcceptanceStates = set()
+        for state in newDStates:
+            splitedState = state.split(';')
+            if splitedState[0].strip('A1') in d1.acceptanceStates and splitedState[1].strip('A2') in d2.acceptanceStates:
+                newDAcceptanceStates.add(state)
+        newDTransitions = self.carteseanTransitions(d1.transitions,d2.transitions,newDStates)
+        new = FiniteAutomata(newDStates, newDAlphabet, newDTransitions, newDInitialState, newDAcceptanceStates)
+        return new
     
-    def cartesean(self, d1S, d2S):
-        dNewS = []
+    def carteseanStates(self, d1S: Set[str], d2S: Set[str]) -> Set[str]:
+        dNewS: set = set()
         for s1 in d1S:
             for s2 in d2S:
-                dNewS.append((s1,s2))
+                dNewS.add(('A1'+s1+';'+'A2'+s2))
         return dNewS
+
+    def carteseanTransitions(self, d1T, d2T, newDStates):
+        new = set()
+        for tran1 in d1T:
+            for tran2 in d2T:
+                for state in newDStates:
+                    splitedState = state.split(';')
+                    if tran1[0] in splitedState[0].strip('A1') and tran2[0] in splitedState[1].strip('A2') and tran1[2] == tran1[2]:
+                        new.add((state,'A1'+tran1[1]+';'+'A2'+tran2[1]),tran1[2])
+        return new
 
     def equivalence(self, states, finalStates, transitions, dfa):
         helpList = []

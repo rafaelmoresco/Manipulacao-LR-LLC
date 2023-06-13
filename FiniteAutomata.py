@@ -245,3 +245,23 @@ class FiniteAutomata:
         if '&' in self.__alphabet:
             self.__epsilonRemoval()
         self.__indeterminismRemoval()
+
+    @property
+    def states(self) -> Set[str]:
+        return self.__states
+    
+    @property
+    def initialState(self) -> str:
+        return self.__initialState
+    
+    @property
+    def acceptanceStates(self) -> Set[str]:
+        return self.__acceptanceStates
+    
+    @property
+    def transitions(self) -> Set[Tuple[str, str, str]]:
+        return self.__transitions
+    
+    @property
+    def alphabet(self) -> Set[str]:
+        return self.__alphabet
