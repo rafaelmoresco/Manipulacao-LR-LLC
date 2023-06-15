@@ -9,19 +9,158 @@ class FiniteAutomata:
         self.__states = states
         self.__alphabet = alphabet
         self.__transitions = transitions
+        self.__transitionsDict = self.__transitionsToDict()
         self.__initialState = initialState
         self.__acceptanceStates = acceptanceStates
 
     def __str__(self):
         return f'Estados: {self.__states}\n' +\
             f'Alfabeto: {self.__alphabet}\n' +\
-            f'Transicoes: {self.__transitions}\n' +\
+            f'Transicoes: {self.__transitionsDict}\n' +\
             f'Estado Inicial: {self.__initialState}\n' +\
             f'Estados de Aceitacao: {self.__acceptanceStates}'
     
+    @property
+    def states(self) -> Set[str]:
+        return self.__states
+    
+    @property
+    def initialState(self) -> str:
+        return self.__initialState
+    
+    @property
+    def acceptanceStates(self) -> Set[str]:
+        return self.__acceptanceStates
+    
+    @property
+    def transitions(self) -> Set[Tuple[str, str, str]]:
+        return self.__transitions
+    
+    @property
+    def alphabet(self) -> Set[str]:
+        return self.__alphabet
+
+    @property
+    def isDeterministic(self) -> bool:
+        if '&' in self.__alphabet: return False
+        # if len(self.__transitions) < (len(self.__states) * len(self.__alphabet)): return False
+        for (_, to, _) in self.__transitions:
+            if self.__isCompositeState(to) and to not in self.__states: return False
+        return True
+    
+    @transitions.setter
+    def transitions(self, value: Set[Tuple[str, str, str]]):
+        self.__transitions = value
+        self.__transitionsDict = self.__transitionsToDict()
+
+    def __transitionsToDict(self) -> Dict[str, Set[Tuple[str, str, str]]]:
+        transitions = {}
+        for (initial, to, transition) in self.__transitions:
+            if not transitions.get(initial):
+                transitions[initial] = {(initial, to, transition)}
+            else:
+                transitions[initial].add((initial, to, transition))
+        return transitions
+    
     ######################################### PRIVATE #########################################
 
-    def __removeUnreachables(self) -> None:
+    #################### Auxiliares ####################
+
+    def __splitClassesOfEquivalence(self, equivalenceClasses, splittable, symbol) -> List:
+        '''Calcula e retorna novas classes de equivalência de splittable'''
+        equivalenceClassesDict = {','.join(key): [] for key in equivalenceClasses}
+        equivalenceClassesDict['-'] = []
+
+        for x in splittable:
+            nextState = self.__nextState(x, symbol) ## calcula para onde o estado vai
+            for key, value in equivalenceClassesDict.items():
+                if nextState in key.split(','):
+                    value.append(x)
+                    break
+
+        return [value for _, value in equivalenceClassesDict.items() if value != []]
+
+    def __nextState(self, initialState: str, symbol: str) -> str:
+        '''[Apenas AFD] Retorna o estado alcançado por initialState através do símbolo symbol. Se não houver, retorna "-"'''
+        for (initial, to, transitionsBy) in self.__transitions:
+            if initialState == initial and transitionsBy == symbol:
+                return to
+        return '-'
+    
+    def __isCompositeState(self, state: str) -> bool:
+        '''Verifica se o estado passado é um "estado composto", ex. "q1,q2"'''
+        return len(state.split(',')) > 1
+
+    def __stateTransitsBySymbol(self, state: str, symbol: str) -> bool:
+        for (_, _, s) in self.__transitionsDict[state]:
+            if s == symbol: return True
+        return False
+    
+    def __obtainNewTransitions(self, state: str) -> Set[Tuple[str, str, str]]:
+        '''Obtem as transicoes a partir do estado passado, ex "q1,q2"'''
+        sortedStates = sorted(state.split(','))
+        
+        newTransitions = set()
+        for symbol in self.__alphabet:
+            if symbol == '&': continue
+            newTransition = set()
+            for state in sortedStates:
+                for (_, tran, sym) in self.__transitionsDict[state]:
+                    if symbol == sym:
+                        [newTransition.add(t) for t in tran.split(',')]
+                
+            newTransition = ','.join(sorted(list(newTransition)))
+            if newTransition:
+                newTransitions.add((','.join(sortedStates), newTransition, symbol))
+        
+        return newTransitions
+    
+    def __extractStateTransitionsBySymbol(self, state: str, symbol: str) -> Set[str]:
+        for (_, to, sym) in self.__transitionsDict[state]:
+            if symbol == sym: return set(to.split(','))
+        return {}
+
+    def __obtainEpsilonClosureOfState(self, state: str) -> Set[str]:
+        '''Computa e retorna o epsilon-fecho do estado'''
+        epsilonStates: Set[str] = {state}
+        unprocessedStates = [state]
+        while unprocessedStates:
+            state = unprocessedStates.pop()
+            for epsilonTransitionState in self.__extractStateTransitionsBySymbol(state, '&'):
+                if epsilonTransitionState not in epsilonStates:
+                    unprocessedStates.append(epsilonTransitionState)
+                    epsilonStates.add(epsilonTransitionState)
+        
+        return epsilonStates
+
+    def __obtainReachableStatesByStatesAndSymbol(self, states: Set[str], symbol: str) -> Set[str]:
+        '''Retorna os estados alcançados pelos estados passados através do symbol'''
+        transitionExtractedStates = set()
+        for state in states:
+            [transitionExtractedStates.add(extracted) for extracted in self.__extractStateTransitionsBySymbol(state, symbol)]
+        
+        finalStates = transitionExtractedStates.copy()
+        
+        for extractedState in transitionExtractedStates:
+            for epsilonClosuredState in self.__obtainEpsilonClosureOfState(extractedState):
+                finalStates.add(epsilonClosuredState)
+
+        return finalStates
+    
+    def __updateAcceptanceStates(self) -> None:
+        '''Compara os estados do automato com os estados de aceitação, marcando novos estados de aceitação se houverem'''
+        newAcceptanceStates = set()
+        for state in self.__states:
+            for s in state.split(','):
+                if s in self.__acceptanceStates:
+                    newAcceptanceStates.add(state)
+                    break
+        [self.__acceptanceStates.add(newAccState) for newAccState in newAcceptanceStates]
+
+    #################### Regras/Lógicas ####################
+
+    def __removeUnreachableStates(self) -> None:
+        '''Calcula e remove estados inalcançáveis, atualizando o automato por completo'''
         reachableStates = set()
         reachableTransitions = set()
         reachableStates.add(self.__initialState)
@@ -40,11 +179,12 @@ class FiniteAutomata:
         self.__states = reachableStates
 
         # Atualiza os estados com os estados alcançaveis
-        self.__transitions = reachableTransitions
+        self.transitions = reachableTransitions
         # Remove dos estados de aceitação os estados inalcançaveis
         self.__acceptanceStates = set([state for state in self.__acceptanceStates if state in reachableStates])
 
-    def __removeDeads(self) -> None:
+    def __removeDeadStates(self) -> None:
+        '''Calcula e remove estados mortos, atualizando o automato por completo'''
         aliveStates = self.__acceptanceStates.copy()
         transitions = list(self.__transitions)
         aliveTransitions = set()
@@ -58,29 +198,10 @@ class FiniteAutomata:
                     transitions.remove(item)
                     alive = True
         self.__states = aliveStates
-        self.__transitions = aliveTransitions
-
-    # Apenas para AFD
-    def __nextState(self, initialState, symbol) -> str:
-        for [initial, to, transitionsBy] in self.__transitions:
-            if initialState == initial and transitionsBy == symbol:
-                return to
-        return '-'
-        
-    def __splitClassesOfEquivalence(self, equivalenceClasses, splittable, symbol) -> List:
-        equivalenceClassesDict = {','.join(key): [] for key in equivalenceClasses}
-        equivalenceClassesDict['-'] = []
-
-        for x in splittable:
-            nextState = self.__nextState(x, symbol) ## calcula para onde o estado vai
-            for key, value in equivalenceClassesDict.items():
-                if nextState in key.split(','):
-                    value.append(x)
-                    break
-
-        return [value for _, value in equivalenceClassesDict.items() if value != []]
-            
+        self.transitions = aliveTransitions
+                    
     def __removeEquivalents(self):
+        '''Calcula as classes de equivalência e remove estados redundantes, atualizando o automato por completo'''
         statesNotFinal = []
         equivalenceClasses: List[set] = []
         finalStates = self.__acceptanceStates.copy()
@@ -117,7 +238,7 @@ class FiniteAutomata:
                     newTo = ','.join(eClass)
             newTransitions[i] = (newInitial, newTo, transition)
          
-        self.__transitions = set(newTransitions)
+        self.transitions = set(newTransitions)
 
         for eClass in equivalenceClasses:    
             # Atualiza o estado inicial   
@@ -130,138 +251,81 @@ class FiniteAutomata:
                     self.__acceptanceStates.add(','.join(eClass))
 
         self.__states = set([','.join(group) for group in equivalenceClasses])
-
-    def __transitionsToDict(self) -> Dict[str, List[Set[Tuple[str, str, str]]]]:
-        transitions = {}
-        for (initial, to, transition) in self.__transitions:
-            if not transitions.get(initial):
-                transitions[initial] = [(initial, to, transition)]
-            else:
-                transitions[initial].append((initial, to, transition))
-        return transitions
-
-    def __obtainNewTransitions(self, newState: str) -> Set[Tuple[str, str, str]]:
-        sortedNewStates = sorted(newState.split(','))
-        transitionsDict = self.__transitionsToDict()
-        
-        newTransitions = set()
+    
+    def __convertEpsilonTransitions(self) -> None:
+        '''Elimina as transicoes por épsilon, substituindo as transicoes dos estados a partir dos cálculos de epsilon-fecho correspondentes'''
+        epsilonClosureOfStateCache: Dict[str, Set[str]] = {}
         for symbol in self.__alphabet:
-            if symbol == '&': continue
-            newTransition = set()
-            for state in sortedNewStates:
-                for (_, tran, sym) in transitionsDict[state]:
-                    if symbol == sym:
-                        [newTransition.add(t) for t in tran.split(',')]
+            for state, stateTransitions in self.__transitionsDict.items():
+                # Pega dos fechos computados para o estado ou computa e adiciona se nao houver
+                epsilonClosuredStates = epsilonClosureOfStateCache.get(state) or self.__obtainEpsilonClosureOfState(state)
+                if not epsilonClosureOfStateCache.get(state):
+                    epsilonClosureOfStateCache[state] = epsilonClosuredStates
                 
-            newTransition = ','.join(sorted(list(newTransition)))
-            if newTransition:
-                newTransitions.add((','.join(sortedNewStates), newTransition, symbol))
+                # Obtem o resto dos estados alcançáveis por epsilon
+                epsilonClosuredStatesForSymbol = self.__obtainReachableStatesByStatesAndSymbol(list(epsilonClosuredStates), symbol)
+
+                # Substitui a respectiva transicao pelo epsilon-fecho calculado
+                for transition in stateTransitions:
+                    if transition[2] == symbol: self.__transitions.remove(transition)
+                if epsilonClosuredStatesForSymbol:
+                    self.__transitions.add((state, ','.join(sorted(list((epsilonClosuredStatesForSymbol)))), symbol))
+                self.transitions = self.__transitions # trigger @property.set pq python
         
-        return newTransitions
+        # Remove as transicoes por epsilon
+        for transition in list(self.__transitions):
+            if transition[2] == '&': self.__transitions.remove(transition)
+        self.transitions = self.__transitions # trigger @property.set pq python
 
-    def __epsilonRemoval(self) -> None:
-        # Dicionario cuja chave é o estado e o valor é o epsilon fecho desse estado
-        # Inicializa adicionando o proprio estado ao epsilon fecho
-        epsilonClosure: Dict[str, set] = {state: {state} for state in self.__states}
+    def __convertIndeterministicTransitions(self) -> None:
+        '''Elimina as transicoes indeterministicas, gerando novos estados com transicoes correspondentes'''
+        determinizedStates = set()
+        determinizedTransitions = set()
+        unprocessedStates = self.__states.copy()
+        # Percorre todos os estados originais do automato e estados novos gerados a partir do processo de determinização
+        while unprocessedStates:
+            # Pega um estado e o marca como determinizado
+            state = unprocessedStates.pop()
+            determinizedStates.add(state)
+            # Se é um estado original, copia suas transições para transições determinizadas
+            # Se é um estado novo, gera novas transicoes as adiciona às transições determinizadas
+            for (initial, to, symbol) in (self.__transitionsDict.get(state) or self.__obtainNewTransitions(state)):
+                determinizedTransitions.add((initial, to, symbol))
+                # Ao se deparar com um estado não determinizado, adiciona à lista para futura iteração
+                if to not in determinizedStates:
+                    unprocessedStates.add(to)
         
-        # Adiciona as transicoes restantes de epsilon-fecho para cada estado
-        while True:
-            oldClosure = epsilonClosure.copy()
-            # Percorre as transiões e procura & transições
-            for (initial, to, transition) in self.__transitions:
-                if transition == '&':
-                    # Percorre os itens em &* e procura a chave
-                    epsilonClosure[initial] = epsilonClosure[initial].union(epsilonClosure[to])
-            if oldClosure == epsilonClosure:
-                break
-        
-        self.__initialState = ','.join(sorted(list(epsilonClosure[self.__initialState])))
-        
-        newStates = set()
-        processedStates = set()
-        newTransitions = set()
-        # Itera pela primeira vez, substituindo estados por epsilon-fecho e gerando novas transicoes
-        for state in epsilonClosure:
-            for (newInitial, newTo, symbol) in self.__obtainNewTransitions(','.join(epsilonClosure[state])):
-                newTransitions.add((newInitial, newTo, symbol))
-                processedStates.add(newInitial)
-                if newTo not in processedStates:
-                    newStates.add(newTo)
+        # Atualiza o automato
+        self.__states = determinizedStates
+        self.transitions = determinizedTransitions # transitions ao inves de __transitions pra invocar @property.set (porque python)
+        self.__updateAcceptanceStates()
 
-        # Enquanto houverem novos estados, gera novas transicoes
-        while newStates:
-            for (newInitial, newTo, symbol) in self.__obtainNewTransitions(newStates.pop()):
-                newTransitions.add((newInitial, newTo, symbol))
-                processedStates.add(newInitial)
-                if newTo not in processedStates:
-                    newStates.add(newTo)
-
-        # Substitui transicoes originais pelas novas geradas a partir de epsilon fecho
-        self.__transitions = newTransitions
-
-        # remove epsilon do alfabeto
-        self.__alphabet.remove('&')
-
-        # substitui o resto do automato (estados, estados de aceitacao)
-        self.__states = set()
-        oldAcceptanceStates = self.__acceptanceStates
-        self.__acceptanceStates = set()
-        for (initial, to, symbol) in self.__transitions:
-            self.__states.add(initial)
-            for state in initial.split(','):
-                if state in oldAcceptanceStates:
-                    self.__acceptanceStates.add(initial)
-                    break
-
-    def __indeterminismRemoval(self) -> None:
-        pass
+    
 
     ######################################### PUBLIC #########################################
 
-    def isDeterministic(self) -> bool:
-        initials: List[tuple] = [(initial, condition) for [initial, final, condition] in self.__transitions]        
-        initialsSet: set = set(initials)
-        if len(initials) != len(initialsSet):
-            return False
-        else:
-            for (_,condition) in initialsSet:
-                if condition == '&': return False
-        return True
-
     def minimize(self) -> 'FiniteAutomata':
+        '''Minimiza a instância de FiniteAutomata, removendo estados mortos, inalcançáveis e equivalentes/redundantes'''
         # Itera até remover todos estados mortos e inalcançaveis 
         while True:
             previousStates = self.__states
-            self.__removeDeads()
-            self.__removeUnreachables()
+            self.__removeDeadStates()
+            self.__removeUnreachableStates()
             if previousStates == self.__states:
                 break
         
-        # Faz as classes de equivalencia
+        # Calcula as classes de equivalência e substitui/remove as redundantes
         self.__removeEquivalents()
         return self
 
     def determinize(self) -> 'FiniteAutomata':
+        '''Determiniza a instância de FiniteAutomata se for indeterminística (contendo transições por épsilon-fecho ou não), caso contrário retorna ela mesma'''
+        # Se é um DFA, nao faz nada
+        if self.isDeterministic: 
+            return self
+        # Se possui transicoes por epsilon, converte em nao-deterministico sem transicoes por epsilon
         if '&' in self.__alphabet:
-            self.__epsilonRemoval()
-        self.__indeterminismRemoval()
-
-    @property
-    def states(self) -> Set[str]:
-        return self.__states
-    
-    @property
-    def initialState(self) -> str:
-        return self.__initialState
-    
-    @property
-    def acceptanceStates(self) -> Set[str]:
-        return self.__acceptanceStates
-    
-    @property
-    def transitions(self) -> Set[Tuple[str, str, str]]:
-        return self.__transitions
-    
-    @property
-    def alphabet(self) -> Set[str]:
-        return self.__alphabet
+            self.__convertEpsilonTransitions()
+        # Converte em um automato determinístico
+        self.__convertIndeterministicTransitions()
+        return self

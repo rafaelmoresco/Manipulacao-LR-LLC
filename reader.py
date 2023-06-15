@@ -15,7 +15,7 @@ class Reader():
         states: Set[str] = set()
         initialState: str = None
         acceptanceStates: Set[str] = set()
-        transitions: List[Tuple[str, str, str]] = []
+        transitions: Set[Tuple[str, str, str]] = set()
         
         for i in range(1, len(content)):
             line = content[i].replace(' ', '').strip('\n')
@@ -31,7 +31,7 @@ class Reader():
 
             for j in range(len(splitedLine)-1):
                 if '-' not in splitedLine[j+1]:
-                    transitions.append((cleanState, splitedLine[j+1].strip('*'), alphabet[j]))
+                    transitions.add((cleanState, splitedLine[j+1].strip('*'), alphabet[j]))
 
         return FiniteAutomata(states, alphabet, transitions, initialState, acceptanceStates)
 
