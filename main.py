@@ -1,9 +1,9 @@
 from reader import Reader
 from FiniteAutomata import FiniteAutomata
-from FAAlgorithms import NFA
+from FAAlgorithms import FAAlgorithm
 
 reader = Reader()
-algoritm = NFA()
+algoritm = FAAlgorithm()
 automata: FiniteAutomata = reader.readAF('input.txt')
 
 # print("\nantes de determinizar\n", automata)
@@ -18,5 +18,5 @@ b: FiniteAutomata = reader.readAF('b.txt')
 
 print("\nA\n", a)
 print("\nB\n", b)
-c: FiniteAutomata = algoritm.dfaUnion(a,b)
+c: FiniteAutomata = algoritm.dfaIntersection(a,b)
 print("\nC\n", c)
