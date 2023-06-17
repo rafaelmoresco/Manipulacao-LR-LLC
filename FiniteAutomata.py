@@ -300,8 +300,30 @@ class FiniteAutomata:
         self.transitions = determinizedTransitions # transitions ao inves de __transitions pra invocar @property.set (porque python)
         self.__updateAcceptanceStates()
 
-    
-
+    def __readWord(self, word: str) -> bool:
+        word = list(word)
+        currentState = self.__initialState
+        helperBool = True
+        # Percorre todas as letras da palavra
+        for letter in word:
+            # Primeiro verifica se o símbolo está no alfabeto
+            if letter in self.__alphabet:
+                # Olha todas as transições do estado atual, procurando uma com o símbolo atual
+                for transition in self.__transitionsDict[currentState]:
+                    if letter in transition[2]:
+                        currentState = transition[1]
+                        helperBool = True
+                        break
+                    else:
+                        helperBool = False
+                # Quando não encontra uma transição pelo símbolo no estado atual, retorna falso
+                if not helperBool:
+                    return False
+            else:
+                return False
+        # Ao terminar a palabra, verifica se o estado atual é um estado de aceitação
+        if currentState in self.__acceptanceStates:
+            return True
     ######################################### PUBLIC #########################################
 
     def minimize(self) -> 'FiniteAutomata':
@@ -331,21 +353,10 @@ class FiniteAutomata:
         return self
     
     def read(self, word: str) -> bool:
-        word = list(word)
-        currentState = self.__initialState
-        helperBool = True
-        for letter in word:
-            if letter in self.__alphabet:
-                for transition in self.__transitionsDict[currentState]:
-                    if letter in transition[2]:
-                        currentState = transition[1]
-                        helperBool = True
-                        break
-                    else:
-                        helperBool = False
-                if not helperBool:
-                    return False
-            else:
-                return False
-        if currentState in self.__acceptanceStates:
-            return True
+        # Se é um DFA, faz uma leitura direta da palavra
+        if self.isDeterministic():
+            return self.__readWord(word)
+        # Se é um NFA, determiniza antes de ler a palavra
+        else:
+            self.determinize()
+            return self.__readWord(word)
