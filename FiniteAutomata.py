@@ -210,7 +210,7 @@ class FiniteAutomata:
         equivalenceClasses: List[set] = []
         finalStates = self.__acceptanceStates.copy()
         
-        equivalenceClasses.append(finalStates)
+        equivalenceClasses.append(sorted(list(finalStates)))
         statesNotFinal = [state for state in self.__states if state not in finalStates]
         if statesNotFinal != []:
             equivalenceClasses.append(statesNotFinal)
