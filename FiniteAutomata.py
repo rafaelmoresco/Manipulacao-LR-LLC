@@ -329,3 +329,23 @@ class FiniteAutomata:
         # Converte em um automato determinístico
         self.__convertIndeterministicTransitions()
         return self
+    
+    def read(self, word: str) -> bool:
+        word = list(word)
+        currentState = self.__initialState
+        helperBool = True
+        for letter in word:
+            if letter in self.__alphabet:
+                for transition in self.__transitionsDict[currentState]:
+                    if letter in transition[2]:
+                        currentState = transition[1]
+                        helperBool = True
+                        break
+                    else:
+                        helperBool = False
+                if not helperBool:
+                    return False
+            else:
+                return False
+        if currentState in self.__acceptanceStates:
+            return True
