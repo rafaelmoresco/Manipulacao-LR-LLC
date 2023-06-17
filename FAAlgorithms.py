@@ -9,14 +9,14 @@ class NFA():
 
     def dfaUnion(self, d1: FiniteAutomata, d2: FiniteAutomata) -> FiniteAutomata:
         newDStates = self.carteseanStates(d1.states, d2.states)
-        newDAlphabet = d1.alphabet.union(d2.alphabet)
+        newDAlphabet: set = d1.alphabet.union(d2.alphabet)
         newDInitialState = 'A1'+d1.initialState+';'+'A2'+d2.initialState
         newDAcceptanceStates = set()
         for state in newDStates:
             splitedState = state.split(';')
             if splitedState[0].strip('A1') in d1.acceptanceStates or splitedState[1].strip('A2') in d2.acceptanceStates:
                 newDAcceptanceStates.add(state)
-        newDTransitions = self.carteseanTransitions(d1.transitions,d2.transitions,newDStates)
+        newDTransitions = self.carteseanTransitions(d1.transitionsDict,d2.transitionsDict,newDStates)
         new = FiniteAutomata(newDStates, newDAlphabet, newDTransitions, newDInitialState, newDAcceptanceStates)
         return new
 
@@ -29,7 +29,7 @@ class NFA():
             splitedState = state.split(';')
             if splitedState[0].strip('A1') in d1.acceptanceStates and splitedState[1].strip('A2') in d2.acceptanceStates:
                 newDAcceptanceStates.add(state)
-        newDTransitions = self.carteseanTransitions(d1.transitions,d2.transitions,newDStates)
+        newDTransitions = self.carteseanTransitions(d1.transitionsDict,d2.transitionsDict,newDStates)
         new = FiniteAutomata(newDStates, newDAlphabet, newDTransitions, newDInitialState, newDAcceptanceStates)
         return new
     
@@ -40,14 +40,16 @@ class NFA():
                 dNewS.add(('A1'+s1+';'+'A2'+s2))
         return dNewS
 
-    def carteseanTransitions(self, d1T, d2T, newDStates):
+    def carteseanTransitions(self, d1T: Dict[str, Set[Tuple[str, str, str]]], d2T: Dict[str, Set[Tuple[str, str, str]]], newDStates: Set[str]) -> Set[Tuple[str, str, str]]:
         new = set()
-        for tran1 in d1T:
-            for tran2 in d2T:
-                for state in newDStates:
-                    splitedState = state.split(';')
-                    if tran1[0] in splitedState[0].strip('A1') and tran2[0] in splitedState[1].strip('A2') and tran1[2] == tran1[2]:
-                        new.add((state,'A1'+tran1[1]+';'+'A2'+tran2[1]),tran1[2])
+        print(d1T)
+        for state in newDStates:
+            splitedState = state.split(';')
+            print(splitedState)
+            for tran1 in d1T[splitedState[0].strip('A1')]:
+                for tran2 in d2T[splitedState[1].strip('A2')]:
+                    if tran1[2] == tran2[2]:
+                        new.add((state,'A1'+tran1[1]+';'+'A2'+tran2[1],tran1[2]))
         return new
 
 '''

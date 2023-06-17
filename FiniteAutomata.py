@@ -37,6 +37,10 @@ class FiniteAutomata:
         return self.__transitions
     
     @property
+    def transitionsDict(self) -> Dict[str, Set[Tuple[str, str, str]]]:
+        return self.__transitionsDict
+
+    @property
     def alphabet(self) -> Set[str]:
         return self.__alphabet
 
@@ -354,7 +358,7 @@ class FiniteAutomata:
     
     def read(self, word: str) -> bool:
         # Se é um DFA, faz uma leitura direta da palavra
-        if self.isDeterministic():
+        if self.isDeterministic:
             return self.__readWord(word)
         # Se é um NFA, determiniza antes de ler a palavra
         else:
