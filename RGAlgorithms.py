@@ -4,7 +4,7 @@ class GR():
     
     def AFparaGR(self, af):
         #Seta o automato finito
-        af = af;
+        af = af
         # N = K (conjunto de variaveis nao terminais da gramatica = conjunto finito de estados)
         n = self.getConjuntoEstados(af)
         # T = Σ (conjunto de variáveis terminais = conjunto finito de símbolos de entrada)
@@ -28,11 +28,57 @@ class GR():
                     grFinal[index].append(prod)
                     if (linha[i] in f):
                         grFinal[index].append(af[0][i])
+        print(grFinal)
         self.printGR(grFinal)
     
-    def GRparaAF(self):
+    def GRparaAF(self, gr):
         # Caminho contrário puta merda mas fazer o que
-        pass
+        # conjunto de estados finitos = cojunto de variaveis nao terminais + o estado de aceitação
+        k = self.getConjuntoVariaveisNaoTerminais(gr)
+        print(k)
+        # conjunto finito de símbolos de entrada = conjunto de variáveis terminais
+        e = self.getConjuntoVariaveisTerminais(gr)
+        print(e)
+        # estado inicial = simbolo inicial
+        q0 = self.getSimboloInicial(gr)
+        print(q0)
+        # montarAF (PQP)
+        af = []
+        primeiraLinha = []
+        primeiraLinha.append('X')
+        for simbolo in e:
+            primeiraLinha.append(simbolo)
+        af.append(primeiraLinha)
+        aux = []
+        for estado in k:
+            aux.append(estado)
+            af.append(aux)
+            aux = []
+        # gerando a matriz no formato final, falta simplesmente preencher as listas dos estados com o que vem da gramatica
+        print(af)
+
+    def getSimboloInicial(self, gr):
+        return gr[0][0]
+
+    def getConjuntoVariaveisTerminais(self, gr):
+        conjuntoTerminais = []
+        for linha in gr:
+            for i in range(1, len(linha)):
+                if('|' in linha[i]):
+                    aux = linha[i].split('|')
+                    if(aux[0] not in conjuntoTerminais):
+                        conjuntoTerminais.append(aux[0])
+                else:
+                    if(linha[i] not in conjuntoTerminais):
+                        conjuntoTerminais.append(linha[i])
+        return conjuntoTerminais
+
+    def getConjuntoVariaveisNaoTerminais(self, gr):
+        conjuntoNaoTerminais = []
+        for linha in gr:
+            conjuntoNaoTerminais.append(linha[0])
+        conjuntoNaoTerminais.append('*Aceitacao')
+        return conjuntoNaoTerminais
 
     # Printa a GR formatada
     def printGR(self, grFinal):
@@ -65,7 +111,7 @@ class GR():
                 conjuntoSimbolosFinal.append(simbolo)
         return conjuntoSimbolosFinal 
 
-    # Pega simbolo inicial
+    # Pega estado inicial
     def getEstadoInicial(self, af):
         conjuntoEstados = []
         for linha in af:
@@ -107,5 +153,10 @@ questao7 = [['X', 'a', 'b'],
  ['*S4', 'S4', 'S5'],
  ['*S5', 'S1', 'S5']]
 
+ex_gr = [['->S', 'a|A', 'b|B', 'b'],
+         ['A', 'a|S'],
+         ['B', 'b|B', 'b']]
+
 teste = GR()
-teste.AFparaGR(questao7)
+#teste.AFparaGR(questao7)
+teste.GRparaAF(ex_gr)
