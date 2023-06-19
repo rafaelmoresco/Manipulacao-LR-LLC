@@ -45,7 +45,7 @@ class FiniteAutomata:
         if '&' in self.__alphabet: return False
         # if len(self.__transitions) < (len(self.__states) * len(self.__alphabet)): return False
         for (_, to, _) in self.__transitions:
-            if self.__isCompositeState(to) and to not in self.__states: return False
+            if self.__isCompoundState(to) and to not in self.__states: return False
         return True
     
     @transitions.setter
@@ -65,33 +65,91 @@ class FiniteAutomata:
     ######################################### PRIVATE #########################################
 
     #################### Auxiliares ####################
-
-    def __splitClassesOfEquivalence(self, equivalenceClasses, splittable, symbol) -> List:
-        '''Calcula e retorna novas classes de equivalência de splittable'''
-        equivalenceClassesDict = {','.join(key): [] for key in equivalenceClasses}
-        equivalenceClassesDict['-'] = []
-
-        for x in splittable:
-            nextState = self.__nextState(x, symbol) ## calcula para onde o estado vai
-            for key, value in equivalenceClassesDict.items():
-                if nextState in key.split(','):
-                    value.append(x)
-                    break
-
-        return [value for _, value in equivalenceClassesDict.items() if value != []]
-
-    def __nextState(self, initialState: str, symbol: str) -> str:
-        '''[Apenas AFD] Retorna o estado alcançado por initialState através do símbolo symbol. Se não houver, retorna "-"'''
-        for (initial, to, transitionsBy) in self.__transitions:
-            if initialState == initial and transitionsBy == symbol:
-                return to
-        return '-'
     
-    def __isCompositeState(self, state: str) -> bool:
-        '''Verifica se o estado passado é um "estado composto", ex. "q1,q2"'''
+    def __isCompoundState(self, state: str) -> bool:
+        '''Verifica se o estado passado é um estado "composto", ex. "q1,q2"'''
         return len(state.split(',')) > 1
 
+    def __mapEquivalenceClassesIndexes(self, classes: List[List[str]]) -> Dict[str, int]:
+        '''Mapeia as classes de equivalência passadas e gera um dicionario/map contendo a classe e seu índice'''
+        classesDict: Dict[str, int] = {}
+        for i, statesGroup in enumerate(classes):
+            for state in statesGroup:
+                if state in self.__states:
+                    classesDict[state] = i
+        
+        classesDict['-'] = len(classes)
+        return classesDict
+    
+    def __generateEquivalenceClasses(self, eqClasses: List[List[str]]) -> List[List[str]]:
+        '''Computa novas classes de equivalência a partir da classe de equivalência passada'''
+        # Gera um map que contém estado como chave e índice da classe de equivalencia como valor
+        classesIndexMap: Dict[str, int] = self.__mapEquivalenceClassesIndexes(eqClasses)
+        
+        # Separam-se as classes de equivalência pelos seus tamanhos isolando as classes que contém somente um estado.
+        # Assim, somente classes de equivalência não únicas/com mais de um estado devem ser processadas
+        uniqueClasses: List[List[str]] = []
+        compoundClasses: List[List[str]] = []
+        for stateGroup in eqClasses:
+            if len(stateGroup) > 1:
+                compoundClasses.append(stateGroup)
+            elif len(stateGroup) == 1:
+                uniqueClasses.append(stateGroup)
+
+        # O seguinte dicionário armazena os índices de classes de equivalência como chave, e seus estados como valor
+        # Assim, conforme novos índices vão sendo gerados, os valores contidos no dicionário serão as classes de eq. resultantes
+        classesCombinationsPerSymbolDict: Dict[str, List[str]] = {}
+        # O processamento ocorre da seguinte forma:
+        for compoundStateGroup in compoundClasses:
+            for state in compoundStateGroup:
+                # Para cada estado, gera-se uma combinação através do índice (classesIndexMap) da classe de equivalência resultate
+                # da transição por cada símbolo. Assim, se um estado transita para a classe de índice 0 por um símbolo, e para a classe
+                # de índice 1 por outro, a combinação resultate é '01'.
+                eqClassCombination = ''
+                for symbol in self.__alphabet:
+                    eqClassCombination += str(classesIndexMap[self.__nextState(state, symbol)])
+                # A combinação então gerada é utilizada como chave para o dicionário, e o estado é adicionado ao valor.
+                # Ou seja, cada elemento do dicionário representa uma classe de equivalência.
+                if not classesCombinationsPerSymbolDict.get(eqClassCombination):
+                    classesCombinationsPerSymbolDict[eqClassCombination] = [state]
+                else:
+                    classesCombinationsPerSymbolDict[eqClassCombination].append(state)
+        
+        newClasses: List[List[str]] = list(classesCombinationsPerSymbolDict.values())
+        if len(uniqueClasses) > 0:
+            newClasses.extend(uniqueClasses)
+        return newClasses
+
+    def __areEquivalenceClassesEqual(self, classesA: List[List[str]], classesB: List[List[str]]) -> bool:
+        '''Verifica se as duas classes de equivalência passadas são iguais (implementação tosca de .equals())'''
+        if len(classesA) != len(classesB): return False
+
+        classesSet = set()
+        for statesGroup in classesA:
+            classesSet.add(''.join(statesGroup))
+        
+        equivalents = True
+        for statesGroup in classesB:
+            if not ''.join(statesGroup) in classesSet:
+                equivalents = False
+                break
+        
+        return equivalents
+
+    def __nextState(self, state: str, symbol: str) -> str:
+        '''[AFD] Retorna o estado alcançado a partir da transição de initialState através de symbol'''
+        for (_, to, sym) in self.__transitionsDict[state]:
+            if sym == symbol: return to
+        return '-'
+    
+    def __extractStateTransitionsBySymbol(self, state: str, symbol: str) -> Set[str]:
+        '''[AFND] Retorna todos os estados alcançados a partir de uma transição de state através de symbol'''
+        for (_, to, sym) in self.__transitionsDict[state]:
+            if symbol == sym: return set(to.split(','))
+        return {}
+    
     def __stateTransitsBySymbol(self, state: str, symbol: str) -> bool:
+        '''Verifica se o estado tem transições não vazias pelo símbolo passado'''
         for (_, _, s) in self.__transitionsDict[state]:
             if s == symbol: return True
         return False
@@ -114,11 +172,6 @@ class FiniteAutomata:
                 newTransitions.add((','.join(sortedStates), newTransition, symbol))
         
         return newTransitions
-    
-    def __extractStateTransitionsBySymbol(self, state: str, symbol: str) -> Set[str]:
-        for (_, to, sym) in self.__transitionsDict[state]:
-            if symbol == sym: return set(to.split(','))
-        return {}
 
     def __obtainEpsilonClosureOfState(self, state: str) -> Set[str]:
         '''Computa e retorna o epsilon-fecho do estado'''
@@ -156,6 +209,57 @@ class FiniteAutomata:
                     newAcceptanceStates.add(state)
                     break
         [self.__acceptanceStates.add(newAccState) for newAccState in newAcceptanceStates]
+
+    def __renameCompoundStates(self) -> None:
+        '''Renomeia todos os estados "compostos" para estados "simples", ex.: "q1,q2" -> "nQ1"'''
+        # Define o prefixo e "índice" da label para os estados a serem renomeador
+        newStatePrefix = 'nQ'
+        newStateCount = 0
+        for state in self.__states:
+            if newStatePrefix in state:
+                splitted = state.split(',')
+                # Definitivamente deve ter um jeito melhor de fazer isso, mas nao consigo mais usar o cerebro
+                if len(splitted) > 1:
+                    count = newStateCount
+                    for s in splitted:
+                        count = int(s[2:]) if int(s[2:]) > count else count
+                else:
+                    count = int(state[2:])
+                newStateCount = count+1 if newStateCount <= count else newStateCount
+                
+        for state in self.__states.copy():
+            if not self.__isCompoundState(state): continue
+            # Gera novo nome
+            newStateName = newStatePrefix + str(newStateCount)
+            newStateCount += 1
+
+            # Substitui nome nas transicoes
+            for transition in self.__transitions:
+                (initial, to, symbol) = transition
+                isNewTransition = False
+                if initial == state:
+                    isNewTransition = True
+                    initial = newStateName
+                if to == state:
+                    isNewTransition = True
+                    to = newStateName
+                if isNewTransition:
+                    self.__transitions.remove(transition)
+                    self.__transitions.add((initial, to, symbol))
+                    self.transitions = self.__transitions
+
+            # Substitui nome no estado inicial
+            self.__initialState = newStateName if state == self.__initialState else self.__initialState
+
+            # Substitui nome no estado final
+            for finalState in self.__acceptanceStates:
+                if state == finalState:
+                    self.__acceptanceStates.remove(finalState)
+                    self.__acceptanceStates.add(newStateName)
+
+            # Substitui nome na lista de estados
+            self.__states.remove(state)
+            self.__states.add(newStateName)
 
     #################### Regras/Lógicas ####################
 
@@ -199,58 +303,51 @@ class FiniteAutomata:
                     alive = True
         self.__states = aliveStates
         self.transitions = aliveTransitions
-                    
-    def __removeEquivalents(self):
+
+    def __removeEquivalents(self) -> None:
         '''Calcula as classes de equivalência e remove estados redundantes, atualizando o automato por completo'''
-        statesNotFinal = []
-        equivalenceClasses: List[set] = []
-        finalStates = self.__acceptanceStates.copy()
-        
-        equivalenceClasses.append(finalStates)
-        statesNotFinal = [state for state in self.__states if state not in finalStates]
-        if statesNotFinal != []:
-            equivalenceClasses.append(statesNotFinal)
-        # Acha as classes de equivalencia
+        finalStates = list(self.__acceptanceStates.copy())
+        nonFinalStates = [state for state in self.__states if state not in finalStates]
+
+        # Separa classes de equivalência, a princípio entre estados finais e não finais
+        currentEquivalentClasses: List[List[str]] = [nonFinalStates, finalStates]
+        # Divide as classes de equivalência enquanto continuam sendo divididas
         while True:
-            oldEquivalenceClasses = equivalenceClasses.copy()
-            for symbol in self.__alphabet:
-                for stateGroup in equivalenceClasses:
-                    equivalenceClassesCpy = equivalenceClasses.copy()
-                    equivalenceClasses.remove(stateGroup)
-                    equivalenceClasses.extend(self.__splitClassesOfEquivalence(equivalenceClassesCpy, stateGroup, symbol))
-            
-            if sorted(equivalenceClasses) == sorted(oldEquivalenceClasses):
+            previousEquivalentClasses = currentEquivalentClasses
+            currentEquivalentClasses = self.__generateEquivalenceClasses(currentEquivalentClasses)
+            if self.__areEquivalenceClassesEqual(currentEquivalentClasses, previousEquivalentClasses):
                 break
-
-        # Atualiza o automato com os novos estados
-        oldAcceptanceStates = self.__acceptanceStates.copy()
-        self.__acceptanceStates = set()
-        newTransitions = list(self.__transitions)
         
-        # Atualiza as transicoes
-        for i, (initial, to, transition) in enumerate(newTransitions):
-            newInitial = initial
-            newTo = to
-            for eClass in equivalenceClasses:
-                if initial in eClass:
-                    newInitial = ','.join(eClass)
-                if to in eClass:
-                    newTo = ','.join(eClass)
-            newTransitions[i] = (newInitial, newTo, transition)
-         
-        self.transitions = set(newTransitions)
+        # Redefine estado inicial
+        for stateGroup in currentEquivalentClasses:
+            if self.__initialState in stateGroup:
+                self.__initialState = ','.join(stateGroup)
+                break
+        
+        # Redefine as transicoes
+        classesIndexDict = self.__mapEquivalenceClassesIndexes(currentEquivalentClasses)
+        newTransitions: Set[tuple] = set()
+        for stateGroup in currentEquivalentClasses:
+            firstState = stateGroup[0]
+            newState = ','.join(stateGroup)
+            for symbol in self.__alphabet:
+                nextState = self.__nextState(firstState, symbol)
+                if nextState != '-':
+                    newTransitions.add((
+                        newState,
+                        ','.join(currentEquivalentClasses[classesIndexDict[nextState]]),
+                        symbol
+                    ))
+        self.transitions = newTransitions
+        
+        # Redefine os estados
+        self.__states = {','.join(stateGroup) for stateGroup in currentEquivalentClasses}
 
-        for eClass in equivalenceClasses:    
-            # Atualiza o estado inicial   
-            if self.__initialState in eClass:
-                self.__initialState = ','.join(eClass)
-            
-            # Atualiza os estados de aceitacao 
-            for acceptanceState in oldAcceptanceStates:
-                if acceptanceState in eClass:
-                    self.__acceptanceStates.add(','.join(eClass))
+        # Redefine estados de aceitaçao
+        self.__acceptanceStates = {newState for newState in self.__states if any(finalState in newState for finalState in finalStates)}
 
-        self.__states = set([','.join(group) for group in equivalenceClasses])
+        # self.__renameCompoundStates()
+        
     
     def __convertEpsilonTransitions(self) -> None:
         '''Elimina as transicoes por épsilon, substituindo as transicoes dos estados a partir dos cálculos de epsilon-fecho correspondentes'''
@@ -277,6 +374,9 @@ class FiniteAutomata:
             if transition[2] == '&': self.__transitions.remove(transition)
         self.transitions = self.__transitions # trigger @property.set pq python
 
+        # Remove epsilon do alfabeto
+        self.__alphabet.remove('&')
+
     def __convertIndeterministicTransitions(self) -> None:
         '''Elimina as transicoes indeterministicas, gerando novos estados com transicoes correspondentes'''
         determinizedStates = set()
@@ -299,24 +399,11 @@ class FiniteAutomata:
         self.__states = determinizedStates
         self.transitions = determinizedTransitions # transitions ao inves de __transitions pra invocar @property.set (porque python)
         self.__updateAcceptanceStates()
+        self.__renameCompoundStates()
 
     
 
     ######################################### PUBLIC #########################################
-
-    def minimize(self) -> 'FiniteAutomata':
-        '''Minimiza a instância de FiniteAutomata, removendo estados mortos, inalcançáveis e equivalentes/redundantes'''
-        # Itera até remover todos estados mortos e inalcançaveis 
-        while True:
-            previousStates = self.__states
-            self.__removeDeadStates()
-            self.__removeUnreachableStates()
-            if previousStates == self.__states:
-                break
-        
-        # Calcula as classes de equivalência e substitui/remove as redundantes
-        self.__removeEquivalents()
-        return self
 
     def determinize(self) -> 'FiniteAutomata':
         '''Determiniza a instância de FiniteAutomata se for indeterminística (contendo transições por épsilon-fecho ou não), caso contrário retorna ela mesma'''
@@ -328,4 +415,18 @@ class FiniteAutomata:
             self.__convertEpsilonTransitions()
         # Converte em um automato determinístico
         self.__convertIndeterministicTransitions()
+        return self
+
+    def minimize(self) -> 'FiniteAutomata':
+        '''[AFD] Minimiza a instância de FiniteAutomata, removendo estados mortos, inalcançáveis e equivalentes/redundantes'''
+        # Itera até remover todos estados mortos e inalcançaveis 
+        while True:
+            previousStates = self.__states
+            self.__removeDeadStates()
+            self.__removeUnreachableStates()
+            if previousStates == self.__states:
+                break
+        
+        # Calcula as classes de equivalência e substitui/remove as redundantes
+        self.__removeEquivalents()
         return self
