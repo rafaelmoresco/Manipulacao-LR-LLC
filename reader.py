@@ -33,7 +33,7 @@ class Reader():
                 if '-' not in splitedLine[j+1]:
                     transitions.add((cleanState, splitedLine[j+1].strip('*'), alphabet[j]))
 
-        return FiniteAutomata(states, alphabet, transitions, initialState, acceptanceStates)
+        return FiniteAutomata(states, set(alphabet), transitions, initialState, acceptanceStates)
 
     def readGr():
         pass

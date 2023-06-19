@@ -37,6 +37,10 @@ class FiniteAutomata:
         return self.__transitions
     
     @property
+    def transitionsDict(self) -> Dict[str, Set[Tuple[str, str, str]]]:
+        return self.__transitionsDict
+
+    @property
     def alphabet(self) -> Set[str]:
         return self.__alphabet
 
@@ -401,8 +405,30 @@ class FiniteAutomata:
         self.__updateAcceptanceStates()
         self.__renameCompoundStates()
 
-    
-
+    def __readWord(self, word: str) -> bool:
+        word = list(word)
+        currentState = self.__initialState
+        helperBool = True
+        # Percorre todas as letras da palavra
+        for letter in word:
+            # Primeiro verifica se o símbolo está no alfabeto
+            if letter in self.__alphabet:
+                # Olha todas as transições do estado atual, procurando uma com o símbolo atual
+                for transition in self.__transitionsDict[currentState]:
+                    if letter in transition[2]:
+                        currentState = transition[1]
+                        helperBool = True
+                        break
+                    else:
+                        helperBool = False
+                # Quando não encontra uma transição pelo símbolo no estado atual, retorna falso
+                if not helperBool:
+                    return False
+            else:
+                return False
+        # Ao terminar a palabra, verifica se o estado atual é um estado de aceitação
+        if currentState in self.__acceptanceStates:
+            return True
     ######################################### PUBLIC #########################################
 
     def determinize(self) -> 'FiniteAutomata':
@@ -418,7 +444,10 @@ class FiniteAutomata:
         return self
 
     def minimize(self) -> 'FiniteAutomata':
-        '''[AFD] Minimiza a instância de FiniteAutomata, removendo estados mortos, inalcançáveis e equivalentes/redundantes'''
+        '''Minimiza a instância de FiniteAutomata, removendo estados mortos, inalcançáveis e equivalentes/redundantes'''
+        if not self.isDeterministic:
+            print("Tentando minimizar automato não determinístico. Efetuando processo de determinização.")
+            self.determinize()
         # Itera até remover todos estados mortos e inalcançaveis 
         while True:
             previousStates = self.__states
@@ -430,3 +459,12 @@ class FiniteAutomata:
         # Calcula as classes de equivalência e substitui/remove as redundantes
         self.__removeEquivalents()
         return self
+
+    def read(self, word: str) -> bool:
+        # Se é um DFA, faz uma leitura direta da palavra
+        if self.isDeterministic:
+            return self.__readWord(word)
+        # Se é um NFA, determiniza antes de ler a palavra
+        else:
+            self.determinize()
+            return self.__readWord(word)
