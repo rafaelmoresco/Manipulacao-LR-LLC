@@ -35,13 +35,13 @@ class GR():
         # Caminho contrário puta merda mas fazer o que
         # conjunto de estados finitos = cojunto de variaveis nao terminais + o estado de aceitação
         k = self.getConjuntoVariaveisNaoTerminais(gr)
-        print(k)
+        #print(k)
         # conjunto finito de símbolos de entrada = conjunto de variáveis terminais
         e = self.getConjuntoVariaveisTerminais(gr)
-        print(e)
+        #print(e)
         # estado inicial = simbolo inicial
         q0 = self.getSimboloInicial(gr)
-        print(q0)
+        #print(q0)
         # montarAF (PQP)
         af = []
         primeiraLinha = []
@@ -54,8 +54,32 @@ class GR():
             aux.append(estado)
             af.append(aux)
             aux = []
+        for i in range(len(primeiraLinha)-1):
+            for linha in af[1:]:
+                linha.append([])
         # gerando a matriz no formato final, falta simplesmente preencher as listas dos estados com o que vem da gramatica
-        print(af)
+        #print(gr)
+        for index, linha in enumerate(gr):
+            for element in linha[1:]:
+                if("|" in element):
+                    auxiliar = element.split("|")
+                    indice = af[0].index(auxiliar[0])
+                    af[index+1][indice].append(auxiliar[1])
+                else:
+                    indice = af[0].index(element)
+                    af[index+1][indice].append("Aceitacao")
+                    for elementos in linha[1:]:
+                        if(element + '|' in elementos):
+                            uxiliar = elementos.split("|")
+                            for indices ,linhas in enumerate(af):
+                                if (linha[0] == uxiliar[1] and '*' not in af[indice+1][0]):
+                                    af[indice+1][0] = '*'+af[indice+1][0]
+        #print(af)
+        self.printAF(af)
+
+    def printAF(self, afFinal):
+        for linhas in afFinal:
+            print(linhas)
 
     def getSimboloInicial(self, gr):
         return gr[0][0]
