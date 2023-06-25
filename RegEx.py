@@ -1,27 +1,28 @@
 from typing import List, Tuple, Set, Dict, AnyStr
 from FiniteAutomata import FiniteAutomata
 from copy import deepcopy
-### AUXILIARY METHODS
-#Regex validation
+#################### Auxiliares ####################
+# Validação de Regex
 def isValidRegex(regex: str) -> bool:
     return validBrackets(regex) and validOperations(regex)  
-
+# Validação de ()s
 def validBrackets(regex: str) -> bool:
-    opened_brackets = 0
+    openedBrackets = 0
     for c in regex:
         if c == '(':
-            opened_brackets += 1
+            openedBrackets += 1
         if c == ')':
-            opened_brackets -= 1
-        if opened_brackets < 0:
+            openedBrackets -= 1
+        if openedBrackets < 0:
             print('ERROR missing bracket')
             return False
-    if opened_brackets == 0:
+    if openedBrackets == 0:
         return True
     print('ERROR unclosed brackets')
     return False    
-
+# Validação de Operações
 def validOperations(regex: str) -> bool:
+    # Percorre todos os caracteres do regex, contando a posição de cada
     for i, c in enumerate(regex):
         if c == '*':
             if i == 0:
@@ -53,85 +54,88 @@ class RegexNode:
         self.__position = None
         self.__children: List['RegexNode'] = []
 
-        #Check if it is leaf
+        # Verifica se é uma folha
         if len(regex) == 1 and self.__isLetter(regex):
-            #Leaf
+            # Folha
             self.__item = regex
-            #Lambda checking
+            # Se for &, folha é nullable
             if self.__item == '&':
                 self.__nullable = True
             else:
                 self.__nullable = False
             return
         
-        #It is an internal node
-        #Finding the leftmost operators in all three
+        # Se não é uma folha, continua gerando a árvore
+        # Encontra a operação mais a esquerda
         kleene = -1
-        or_operator = -1
+        orOperator = -1
         concatenation = -1
         i = 0
 
-        #Getting the rest of terms    
+        # Pega o resto dos termos    
         while i < len(regex):
             if regex[i] == '(':
-                #Composed block
-                bracketing_level = 1
-                #Skipping the entire term
+                # Bloco composto
+                bracketingLevel = 1
+                # Pula todo o termo
                 i+=1
-                while bracketing_level != 0 and i < len(regex):
+                while bracketingLevel != 0 and i < len(regex):
                     if regex[i] == '(':
-                        bracketing_level += 1
+                        bracketingLevel += 1
                     if regex[i] == ')':
-                        bracketing_level -= 1
+                        bracketingLevel -= 1
                     i+=1
             else:
-                #Going to the next char
+                # Vai para o próximo char
                 i+=1
             
-            #Found a concatenation in previous iteration
-            #And also it was the last element check if breaking
+            # Se for o ultimo elemento, saí do loop
             if i == len(regex):
                 break
 
-            #Testing if concatenation
+            # Verifica se é uma concatenação
             if self.__isConcat(regex[i]):
                 if concatenation == -1:
                     concatenation = i
                 continue
-            #Testing for kleene
+            # Verifica se é um fecho de kleene
             if regex[i] == '*':
                 if kleene == -1:
                     kleene = i
                 continue
-            #Testing for or operator
+            # Verifica se é uma operação ou
             if regex[i] == '|':
-                if or_operator == -1:
-                    or_operator = i
+                if orOperator == -1:
+                    orOperator = i
         
-        #Setting the current operation by priority
-        if or_operator != -1:
-            #Found an or operation
+        # Define a operação
+        if orOperator != -1:
+            # Encontrou um ou
             self.__item = '|'
-            self.__children.append(RegexNode(self.__trimBrackets(regex[:or_operator]),self.__alphabet))
-            self.__children.append(RegexNode(self.__trimBrackets(regex[(or_operator+1):]),self.__alphabet))
+            self.__children.append(RegexNode(self.__trimBrackets(regex[:orOperator]),self.__alphabet))
+            self.__children.append(RegexNode(self.__trimBrackets(regex[(orOperator+1):]),self.__alphabet))
         elif concatenation != -1:
-            #Found a concatenation
+            # Encontrou uma concatenação
             self.__item = '.'
             self.__children.append(RegexNode(self.__trimBrackets(regex[:concatenation]),self.__alphabet))
             self.__children.append(RegexNode(self.__trimBrackets(regex[concatenation:]),self.__alphabet))
         elif kleene != -1:
-            #Found a kleene
+            # Encontrou um fecho
             self.__item = '*'
             self.__children.append(RegexNode(self.__trimBrackets(regex[:kleene]),self.__alphabet))
+    
+    ######################################### PRIVATE #########################################
 
+    #################### Auxiliares ####################
+    # Remove os ()s das extremidades
     def __trimBrackets(self, regex: str) -> str:
         while regex[0] == '(' and regex[-1] == ')' and isValidRegex(regex[1:-1]):
             regex = regex[1:-1]
         return regex
-    
+    # Verifica se é concatenação
     def __isConcat(self, c: str) -> bool:
         return c == '(' or self.__isLetter(c)
-    
+    # Verifica se é uma letra individual
     def __isLetter(self, c: str) -> bool:
         return c in self.__alphabet
     
@@ -144,6 +148,8 @@ class RegexNode:
     @property
     def lastpos(self) -> List[int]:
         return self.__lastpos
+    
+    ######################################### PUBLIC #########################################
 
     def calcFunctions(self, pos: int, followpos: List[str]):
         if self.__isLetter(self.__item):
@@ -162,17 +168,17 @@ class RegexNode:
         if self.__item == '.':
             #Is concatenation
             #Firstpos
-            if self.__children[0].__nullable:
+            if self.__children[0].nullable:
                 self.__firstpos = sorted(list(set(self.__children[0].firstpos + self.__children[1].firstpos)))
             else:
                 self.__firstpos = deepcopy(self.__children[0].firstpos)
             #Lastpos
-            if self.__children[1].__nullable:
+            if self.__children[1].nullable:
                 self.__lastpos = sorted(list(set(self.__children[0].lastpos + self.__children[1].lastpos)))
             else:
                 self.__lastpos = deepcopy(self.__children[1].lastpos)
             #Nullable
-            self.__nullable = self.__children[0].__nullable and self.__children[1].__nullable
+            self.__nullable = self.__children[0].nullable and self.__children[1].nullable
             #Followpos
             for i in self.__children[0].lastpos:
                 for j in self.__children[1].firstpos:
@@ -212,7 +218,9 @@ class RegexTree:
         self.__root = RegexNode(self.__regex, self.__alphabet)
         self.__followpos: List[str] = []
         self.__functions()
-    
+
+    ######################################### PRIVATE #########################################
+
     def __preProcess(self, regex) -> str:
         if not isValidRegex(regex):
             exit()
@@ -232,6 +240,8 @@ class RegexTree:
     def __functions(self) -> None:
         self.__root.calcFunctions(0, self.__followpos)
     
+    ######################################### PUBLIC #########################################
+
     def toDfa(self) -> 'FiniteAutomata':
 
         def containsHashtag(q) -> bool:
