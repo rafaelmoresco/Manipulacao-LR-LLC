@@ -1,9 +1,7 @@
-from pprint import pprint
-from typing import List, Tuple, Set, Dict, ClassVar
+from typing import Tuple, Set, Dict
 from FiniteAutomata import FiniteAutomata
 
-class FAAlgorithm():
-
+class FiniteAutomataUtils():
     def __init__(self) -> None:
         pass
 

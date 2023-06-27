@@ -429,8 +429,6 @@ class FiniteAutomata:
         # Ao terminar a palabra, verifica se o estado atual é um estado de aceitação
         if currentState in self.__acceptanceStates:
             return True
-        else:
-            return False
     ######################################### PUBLIC #########################################
 
     def determinize(self) -> 'FiniteAutomata':

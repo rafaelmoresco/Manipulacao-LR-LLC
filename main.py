@@ -1,9 +1,9 @@
 from reader import Reader
 from FiniteAutomata import FiniteAutomata
-from FAAlgorithms import FAAlgorithm
+from FiniteAutomataUtils import FiniteAutomataUtils
 
 reader = Reader()
-algoritm = FAAlgorithm()
+algoritm = FiniteAutomataUtils()
 automata: FiniteAutomata = reader.readAF('no&.txt')
 
 print("\nantes de determinizar\n", automata)

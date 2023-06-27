@@ -1,4 +1,4 @@
-class GR():
+class RegularGrammar():
     def __init__(self):
         pass
     
@@ -181,6 +181,6 @@ ex_gr = [['->S', 'a|A', 'b|B', 'b'],
          ['A', 'a|S'],
          ['B', 'b|B', 'b']]
 
-teste = GR()
+teste = RegularGrammar()
 #teste.AFparaGR(questao7)
 teste.GRparaAF(ex_gr)
