@@ -1,4 +1,4 @@
-from typing import List, Tuple, Set, Dict, AnyStr
+from typing import List
 from FiniteAutomata import FiniteAutomata
 from copy import deepcopy
 #################### Auxiliares ####################
@@ -46,7 +46,7 @@ def validOperations(regex: str) -> bool:
 
 class RegexNode:
 
-    def __init__(self, regex: str, alphabet: set):
+    def __init__(self, regex: str, alphabet: set) -> None:
         self.__alphabet = alphabet
         self.__nullable = None
         self.__firstpos: List[int] = []
@@ -152,7 +152,7 @@ class RegexNode:
     
     ######################################### PUBLIC #########################################
 
-    def calcFunctions(self, pos: int, followpos: List[str]):
+    def calcFunctions(self, pos: int, followpos: List[str]) -> int:
         # Se for uma folha
         if self.__isLetter(self.__item):
             self.__firstpos = [pos]
@@ -252,7 +252,7 @@ class RegexTree:
     # Converte para um Automato Finito Deterministico
     def toDfa(self) -> 'FiniteAutomata':
 
-        def containsHashtag(q) -> bool:
+        def containsHashtag(q: List[int]) -> bool:
             for i in q:
                 if self.__followpos[i][0] == '#':
                     return True
