@@ -15,3 +15,7 @@ Ideia de input:
     ->S,aA,bB
     A,aA,b
     B,aA,bA
+
+    GLC
+    S -> aAa | a
+    A -> a
