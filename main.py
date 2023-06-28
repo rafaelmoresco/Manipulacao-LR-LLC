@@ -8,44 +8,51 @@ reader = Reader()
 algoritm = FiniteAutomataUtils()
 regularGrammar = GR()
 
+AVAILABLE_OPERATIONS = ["disponivel", "determinizarAF", "minimizarAF", "uniaoAF", "intersecaoAF", "regex", "leituraAF", "GRparaAF", "AFparaGR", "sair"]
+
+print("Digite a operação ['disponivel' para listar as opções]:",end='\n> ')
 while True:
-    print("Digite a operação: ",end='')
     x = input()
-    if x == "determinizarAF":
-        print("Digite o arquivo de origem: ",end='')
+    if x == "disponivel":
+        print(', '.join(AVAILABLE_OPERATIONS))
+    elif x == "determinizarAF":
+        print("Digite o arquivo de origem: ",end='\n> ')
         y = input()
         inputAutomata: FiniteAutomata = reader.readAF(y)
-        inputAutomata.determinize()
+        inputAutomata.determinize().outputToFile('gerados/determinizarAF.txt')
     elif x == "minimizarAF":
-        print("Digite o arquivo de origem: ",end='')
+        print("Digite o arquivo de origem: ",end='\n> ')
         y = input()
         inputAutomata: FiniteAutomata = reader.readAF(y)
-        inputAutomata.minimize()
+        inputAutomata.minimize().outputToFile('gerados/minimizarAF.txt')
     elif x == "uniaoAF":
-        print("Digite o primeiro aquivo de origem: ",end='')
+        print("Digite o primeiro aquivo de origem: ",end='\n> ')
         y = input()
-        print("Digite o segundo aquivo de origem: ",end='')
+        print("Digite o segundo aquivo de origem: ",end='\n> ')
         z = input()
         inputAutomata: FiniteAutomata = reader.readAF(y)
         inputAutomata2: FiniteAutomata = reader.readAF(z)
-        new = algoritm.dfaUnion(inputAutomata, inputAutomata2)
+        automata = algoritm.dfaUnion(inputAutomata, inputAutomata2)
+        automata.outputToFile('gerados/uniaoAF.txt')
     elif x == "intersecaoAF":
-        print("Digite o primeiro aquivo de origem: ",end='')
+        print("Digite o primeiro aquivo de origem: ",end='\n> ')
         y = input()
-        print("Digite o segundo aquivo de origem: ",end='')
+        print("Digite o segundo aquivo de origem: ",end='\n> ')
         z = input()
         inputAutomata: FiniteAutomata = reader.readAF(y)
         inputAutomata2: FiniteAutomata = reader.readAF(z)
-        new = algoritm.dfaIntersection(inputAutomata, inputAutomata2)
+        automata = algoritm.dfaIntersection(inputAutomata, inputAutomata2)
+        automata.outputToFile('gerados/interseccaoAF.txt')
     elif x == "regex":
-         print("Digite o Regex: ", end='')
+         print("Digite o Regex: ", end='\n> ')
          y = input()
          regex = RegexTree(y)
-         new = regex.toDfa()
+         automata = regex.toDfa()
+         automata.outputToFile('gerados/regex.txt')
     elif x == "leituraAF":
-        print("Digite o arquivo de origem: ",end='')
+        print("Digite o arquivo de origem: ",end='\n> ')
         y = input()
-        print("Digite a palavra para ser lida: ",end='')
+        print("Digite a palavra para ser lida: ",end='\n> ')
         z = input()
         inputAutomata: FiniteAutomata = reader.readAF(y)
         if inputAutomata.read(z):
@@ -53,18 +60,17 @@ while True:
         else:
             print("Palavra não reconhecida!")
     elif x == "GRparaAF":
-        print("Digite o arquivo de origem: ",end='')
+        print("Digite o arquivo de origem: ",end='\n> ')
         y = input()
         gr = reader.readGr(y)
-        new = regularGrammar.GRparaAF(gr)
-        new.outputToFile("RGtoFA")
+        automata = regularGrammar.GRparaAF(gr)
+        automata.outputToFile("gerados/GRparaAF.txt")
     elif x == "AFparaGR":
-        print("Digite o arquivo de origem: ",end='')
+        print("Digite o arquivo de origem: ",end='\n> ')
         y = input()
         inputAutomata: FiniteAutomata = reader.readAF(y)
         regularGrammar.AFparaGR(inputAutomata)
     elif x == "sair":
         exit()
-        break
     else:
-        print("Operação Inválida!")
+        print("Operação inválida!")

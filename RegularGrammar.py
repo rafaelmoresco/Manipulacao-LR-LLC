@@ -195,36 +195,3 @@ class GR():
                 estadoFinal = estado.replace("-", "").replace(">", "").replace("*", "")
                 conjuntoEstadosFinais.append(estadoFinal)
         return conjuntoEstadosFinais
-
-######################################## EXEMPLOS ########################################
-
-comEpsilon = [['X', 'a', 'b', 'c', '&'], 
-        ['->*q0', 'q0', '-', '-', 'q1'],
-        ['*q1', '-', 'q1', '-', 'q2'], 
-        ['*q2', '-', '-', 'q2', '-']]
-
-slide = [['X', 'a', 'b'], 
-        ['->S', 'A', 'B'], 
-        ['*A', 'S', 'C'], 
-        ['B', 'C', 'S'],
-        ['C','B','A']]
-
-questao7 = [['X', 'a', 'b'],
- ['->S0', 'S4', 'S5'],
- ['*S1', 'S1', 'S5'],
- ['*S2', '-', 'S5'],
- ['S3', 'S1', 'S5'],
- ['*S4', 'S4', 'S5'],
- ['*S5', 'S1', 'S5']]
-
-af_det = [['X','a','b','c'],
-          ['->*S','A','B','C'],
-          ['*A','-','B','C'],
-          ['*B','A','-','C'],
-          ['*C','-','-','C']]
-
-teste = GR()
-teste2 = Reader()
-#teste.AFparaGR(af_det)
-piroca = teste.GRparaAF(teste2.readGr('input_gr_2.txt'))
-piroca.outputToFile("GrToAf")
