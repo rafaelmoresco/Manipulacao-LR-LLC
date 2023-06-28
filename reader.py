@@ -74,16 +74,17 @@ class Reader():
             if i == 0:
                 initialSymbol = symbol
             
-            for char in line[1]:
-                if char == " " or char == "|": continue
-                if char.isupper():
-                    nonTerminals.add(char)
-                else:
-                    terminals.add(char)
+            for fullProd in line[1].split("|"):
+                fullProd = fullProd.strip()
+                for prod in fullProd.split(" "):
+                    if prod.isupper():
+                        nonTerminals.add(prod)
+                    else:
+                        terminals.add(prod)
             
             productions[symbol] = set()
             constraints = list(map(lambda prod: prod.strip(), line[1].split('|')))
             for constraint in constraints:
-                productions[symbol].add(tuple(constraint))
-        
+                productions[symbol].add(tuple(constraint.split(" ")))
+                
         return ContextFreeGrammar(initialSymbol, terminals, nonTerminals, productions)

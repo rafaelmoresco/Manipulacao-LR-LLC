@@ -1,4 +1,4 @@
-from typing import List, Set, Dict, Tuple
+from typing import Iterable, List, Set, Dict, Tuple
 
 class ContextFreeGrammar:
     def __init__(self, initialSymbol: str, terminals: Set[str], nonTerminals: Set[str], productions: Dict[str, Set[Tuple[str]]]):
@@ -11,7 +11,7 @@ class ContextFreeGrammar:
         self.__terminals: Set[str] = terminals.union({'&'})
         self.__productions: Dict[str, Set[Tuple]] = productions
         self.__firsts: Dict[str, Set[str]] = dict()
-        self.__follows: Dict[str, Set[str]] = {initialSymbol: set('$')}
+        self.__follows: Dict[str, Set[str]] = dict()
 
     @property
     def initialSymbol(self) -> str:
@@ -31,10 +31,12 @@ class ContextFreeGrammar:
 
     @property
     def firsts(self) -> Dict[str, Set[str]]:
+        self.__calcFirsts()
         return self.__firsts
     
     @property
     def follows(self) -> Dict[str, Set[str]]:
+        self.__calcFollows()
         return self.__follows
     
     @property
@@ -74,16 +76,10 @@ class ContextFreeGrammar:
         full = ''
         for symbol in self.__productions:
             line = symbol + ' -> '
-            line += ' | '.join(map(lambda prod: ''.join(prod), self.__productions[symbol]))
+            line += ' | '.join(map(lambda prod: ' '.join(prod), self.__productions[symbol]))
             full += line + '\n'
         return full
     
-    def __calcFirsts(self) -> None:
-        '''Calcula os firsts de cada símbolo que leva a uma produção'''
-        for symbol in self.__productions:
-            self.__getAndSetFirstsOfSymbol(symbol)
-    
-    #################### Regras/Lógicas ####################
     def __getFirstsFromProduction(self, prod: str) -> Set[str]:
         '''Calcula e retorna os firsts de uma determinada cadeia/produção'''
         firsts = set()
@@ -103,7 +99,13 @@ class ContextFreeGrammar:
         # Se a produção é anulável por completa, o símbolo pode gerar palavra vazia, portanto epsilon é um first
         if isProdNullable: firsts.add('&')
         return firsts
-
+    
+    #################### Regras/Lógicas ####################
+    def __calcFirsts(self) -> None:
+        '''Calcula os firsts de cada símbolo não terminal e atualiza o atributo __firsts'''
+        for symbol in self.__productions:
+            self.__getAndSetFirstsOfSymbol(symbol)
+    
     def __getAndSetFirstsOfSymbol(self, symbol: str) -> Set[str]:
         '''Calcula e retorna os firsts para o símbolo, atualizando o atributo firsts da classe'''
         # Condição de parada, se ja calculou, retorna os calculados
@@ -126,6 +128,73 @@ class ContextFreeGrammar:
                 firsts = firsts.union(self.__getFirstsFromProduction(prod))
         self.__firsts[symbol] = firsts.copy()
         return firsts
+    
+    def __calcFollows(self) -> None:
+        '''Calcula os follows de cada símbolo não terminal e atualiza o atributo __follows'''
+        # Calcula firsts se ja nao foram calculados
+        if not self.__firsts: self.__calcFirsts()
+
+        # Inicializa follows
+        for symbol in self.__productions:
+            self.__follows[symbol] = set()
+        
+        # Adiciona final de sentença para os follows do símbolo inicial
+        self.__follows[self.__initialSymbol].add('$')
+        
+        # Itera até que nao hajam mais mudanças nos follows
+        while True:
+            # salva os follows antigos
+            oldFollows = self.__follows.copy()
+
+            # popula o dicionario de follows para cada simbolo
+            for symbol in self.__productions:
+                self.__getAndSetFollowsOfSymbol(symbol)
+            
+            # se nao houve mudanças entre o antigo e o novo, vaza
+            if oldFollows == self.__follows:
+                break
+
+    def __getAndSetFollowsOfSymbol(self, symbol: str) -> Set[str]:
+        '''Calcula e retorna os follows para o símbolo, atualizando o atributo follows da classe'''
+        for prod in self.__productions[symbol]:
+            for i, prodSymbol in enumerate(prod):
+                if prodSymbol not in self.__nonTerminals: continue
+
+                follows = self.__follows[prodSymbol] |\
+                    self.__collectSet(set, prod[i+1:], self.__follows[symbol]) if i + 1 < len(prod) else self.__follows[symbol]
+
+                if len(self.__follows[prodSymbol]) != len(follows):
+                    self.__follows[prodSymbol] = follows
+                
+            # # Itera sobre cada símbolo nas produções do símbolo original
+            # for i, prodSymbol in enumerate(prod):
+            #     if prodSymbol not in self.__nonTerminals: break
+            #     # Se é um símbolo nao terminal
+            #     # Se o símbolo está no final da produção
+            #     if i == len(prod)-1:
+            #         # 
+            #         self.__follows[prodSymbol] = self.__follows[prodSymbol].union(self.__follows[symbol])
+            #     # Ou, se o símbolo é acompanhado por outro símbolo
+            #     else:
+            #         nextProdSymbol = prod[i+1]
+            #         if nextProdSymbol in self.__nonTerminals:
+            #             self.__follows[prodSymbol] = self.__follows[prodSymbol].union(self.__firsts[nextProdSymbol] - {'&'})
+            #         else:
+            #             self.__follows[prodSymbol].add(nextProdSymbol)
+        
+        return self.__follows[symbol].copy()
+    
+    def __collectSet(self, initialSet: Set[str], items: Iterable[str], additionalSet: Set[str]) -> Set[str]:
+        set_ = initialSet
+        for i, item in enumerate(items):
+            if item in self.__nonTerminals:
+                set_ = set_ | (self.__firsts[item] - {'&'})
+                if '&' in self.__firsts[item]:
+                    if items[i+1]: continue
+                    set_ = set_ | additionalSet
+                else:
+                    set_ = set_.add(item)
+        return set_
 
     def __getIndirectNonDeterministicProductions(self) -> Dict[str, Set[Tuple]]:
         '''Percorre a gramática procurando por produções não determinística e retorna um dicionário {símbolo: produções não determinísticas}'''
@@ -328,7 +397,7 @@ class ContextFreeGrammar:
 
         
     ######################################### PUBLIC #########################################
-    def writeToFile(self, filepath='gerados/GLC.txt'):
+    def outputToFile(self, filepath='gerados/GLC.txt'):
         '''Transforma as produções e as escreve em um arquivo em forma de gramática'''
         with open(filepath, 'w') as file:
             file.write(self.__productionsToStr())

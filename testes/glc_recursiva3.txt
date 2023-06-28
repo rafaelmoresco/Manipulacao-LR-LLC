@@ -1,3 +1,3 @@
-E -> TsV | s
+E -> T s V | s
 T -> V | s
-V -> Es | &
+V -> E s | &

@@ -438,13 +438,6 @@ class FiniteAutomata:
     ######################################### PUBLIC #########################################
     
     def outputToFile(self, stringOp: str) -> None:
-        i: int = 0
-        while True:
-            if not path.exists('gerados/'+stringOp+str(i)+'.txt'):
-                f = open('gerados/'+stringOp+str(i)+'.txt','x')
-                break
-            else:
-                i = i+1
         outputString = 'X'
         orderedAlphabet = sorted(list(self.__alphabet))
         for letter in orderedAlphabet:
@@ -483,9 +476,9 @@ class FiniteAutomata:
                 else:
                     outputString = outputString+'|'+'-'
             outputString = outputString+'\n'
-        f.write(outputString)
-        f.close
-        print(stringOp+str(i)+'.txt gerado')
+        with open('gerados/'+stringOp, 'w') as file:
+            file.write(outputString)
+        print(f'Arquivo {stringOp} gerado/atualizado!')
 
     def determinize(self) -> 'FiniteAutomata':
         '''Determiniza a instância de FiniteAutomata se for indeterminística (contendo transições por épsilon-fecho ou não), caso contrário retorna ela mesma'''

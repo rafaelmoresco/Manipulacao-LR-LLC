@@ -5,9 +5,48 @@ class GR():
     def __init__(self):
         pass
     
-    def AFparaGR(self, af):
+    def AFparaGR(self, af: FiniteAutomata, outputFilename):
+        afMatriz = []
+
+        afMatriz.append(['X'])
+        for elements in sorted(af.states):
+            afMatriz.append([elements])
+
+        afMatriz.insert(1, afMatriz.pop(afMatriz.index([af.initialState])))
+
+        sortedAlphabet = sorted(af.alphabet)
+        if(sortedAlphabet[0] == '&'):
+            sortedAlphabet.pop(0)
+            sortedAlphabet.append('&')
+
+        for elements in sortedAlphabet:
+            afMatriz[0].append(elements)
+
+        for i in range(len(afMatriz[0])-1):
+            for linha in afMatriz[1:]:
+                linha.append([])
+
+        for tuplas in sorted(af.transitions):
+            for indice ,linha in enumerate(afMatriz[1:]):
+                for index, element in enumerate(linha[1:]):
+                    if(tuplas[0] == linha[0] and tuplas[2] == afMatriz[0][index+1]):
+                        afMatriz[indice+1][index+1] = tuplas[1]
+
+        for linhas in afMatriz:
+            for i in range(len(linhas)):
+                if (linhas[i] == []):
+                    linhas[i] = '-'
+
+        for estados in afMatriz[1:]:
+            if(estados[0] == af.initialState):
+                estados[0] = '->' + estados[0]
+
+        for estados in afMatriz[1:]:
+            if(estados[0] in af.acceptanceStates):
+                estados[0] = '*' + estados[0]
+
         #Seta o automato finito
-        af = af
+        af = afMatriz
         # N = K (conjunto de variaveis nao terminais da gramatica = conjunto finito de estados)
         n = self.getConjuntoEstados(af)
         # T = Σ (conjunto de variáveis terminais = conjunto finito de símbolos de entrada)
@@ -34,21 +73,17 @@ class GR():
                     grFinal[index].append(prod)
                     if (linha[i] in f):
                         grFinal[index].append(af[0][i])
-        #print(grFinal)
-        self.printGR(grFinal)
+        self.outputGRToFile(grFinal, outputFilename)
     
     def GRparaAF(self, gr):
         # Caminho contrário puta merda mas fazer o que
         # conjunto de estados finitos = cojunto de variaveis nao terminais + o estado de aceitação
         k = self.getConjuntoVariaveisNaoTerminais(gr)
-        #print(k)
         # conjunto finito de símbolos de entrada = conjunto de variáveis terminais
         e = self.getConjuntoVariaveisTerminais(gr)
-        #print(e)
         # estado inicial = simbolo inicial
         q0 = self.getSimboloInicial(gr)
-        #print(q0)
-        # montarAF (PQP)
+        # montarAF 
         af = []
         primeiraLinha = []
         # Coloca o X no cabeçalho
@@ -85,7 +120,6 @@ class GR():
                     # Se for terminal, precisamos garantir também a transação para o estado de aceitação (criando não determinismo)
                     indice = af[0].index(element)
                     af[index+1][indice].append("X")
-        #print(af)
         return self.convertToAF(af)
 
     # Método de print do AF
@@ -139,8 +173,8 @@ class GR():
         return conjuntoNaoTerminais
 
     # Printa a GR formatada
-    def printGR(self, grFinal):
-        arquivo = open("ResultadoGR.txt", "a")
+    def outputGRToFile(self, grFinal, filename):
+        arquivo = open(filename, "a")
         for linha in grFinal:
             for i in range(0, len(linha)):
                 if(i == 0):
@@ -152,6 +186,7 @@ class GR():
                     arquivo.write(" | " + linha[i])
             arquivo.write('\n')
         arquivo.close()
+        print(f'Arquivo {filename} gerado/atualizado!')
 
     # Retorna estados da AF
     def getConjuntoEstados(self, af):
