@@ -5,5 +5,6 @@ from FiniteAutomataUtils import FiniteAutomataUtils
 reader = Reader()
 faUtils = FiniteAutomataUtils()
 # automata: FiniteAutomata = reader.readAF('no&.txt')
-glc = reader.readGLC('testes/glc_recursiva.txt')
-glc.writeToFile()
+glc = reader.readGLC('testes/glc_fatoracao.txt')
+glc.factorate()
+print(glc)
