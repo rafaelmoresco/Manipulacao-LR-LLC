@@ -5,9 +5,50 @@ class GR():
     def __init__(self):
         pass
     
-    def AFparaGR(self, af):
+    def AFparaGR(self, af: FiniteAutomata):
+        afMatriz = []
+
+        afMatriz.append(['X'])
+        for elements in sorted(af.states):
+            afMatriz.append([elements])
+
+        afMatriz.insert(1, afMatriz.pop(afMatriz.index([af.initialState])))
+
+        sortedAlphabet = sorted(af.alphabet)
+        if(sortedAlphabet[0] == '&'):
+            sortedAlphabet.pop(0)
+            sortedAlphabet.append('&')
+
+        for elements in sortedAlphabet:
+            afMatriz[0].append(elements)
+
+        for i in range(len(afMatriz[0])-1):
+            for linha in afMatriz[1:]:
+                linha.append([])
+
+        for tuplas in sorted(af.transitions):
+            for indice ,linha in enumerate(afMatriz[1:]):
+                for index, element in enumerate(linha[1:]):
+                    if(tuplas[0] == linha[0] and tuplas[2] == afMatriz[0][index+1]):
+                        afMatriz[indice+1][index+1] = tuplas[1]
+
+        for linhas in afMatriz:
+            for i in range(len(linhas)):
+                if (linhas[i] == []):
+                    linhas[i] = '-'
+
+        for estados in afMatriz[1:]:
+            if(estados[0] == af.initialState):
+                estados[0] = '->' + estados[0]
+
+        for estados in afMatriz[1:]:
+            if(estados[0] in af.acceptanceStates):
+                estados[0] = '*' + estados[0]
+
+        print(afMatriz)
+
         #Seta o automato finito
-        af = af
+        af = afMatriz
         # N = K (conjunto de variaveis nao terminais da gramatica = conjunto finito de estados)
         n = self.getConjuntoEstados(af)
         # T = Σ (conjunto de variáveis terminais = conjunto finito de símbolos de entrada)
@@ -225,6 +266,6 @@ af_det = [['X','a','b','c'],
 
 teste = GR()
 teste2 = Reader()
-#teste.AFparaGR(af_det)
-piroca = teste.GRparaAF(teste2.readGr('input_gr_2.txt'))
-piroca.outputToFile("GrToAf")
+teste.AFparaGR(teste2.readAF('input2.txt'))
+#test = teste.GRparaAF(teste2.readGr('input_gr_2.txt'))
+#test.outputToFile("GrToAf")

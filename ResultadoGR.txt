@@ -1,4 +1,4 @@
-S -> aA | a | bB | b | cC | c
-A -> bB | b | cC | c
-B -> aA | a | cC | c
-C -> cC | c
+S -> aA | a | bB
+A -> aS | bC
+B -> aC | bS
+C -> aB | bA | b
