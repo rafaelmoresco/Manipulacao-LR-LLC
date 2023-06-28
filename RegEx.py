@@ -1,4 +1,4 @@
-from typing import List, Tuple, Set, Dict, AnyStr
+from typing import List
 from FiniteAutomata import FiniteAutomata
 from copy import deepcopy
 #################### Auxiliares ####################
@@ -8,17 +8,18 @@ def isValidRegex(regex: str) -> bool:
 # Validação de ()s
 def validBrackets(regex: str) -> bool:
     openedBrackets = 0
+    # Percorre o Regex somando para ( e subtraindo para )
     for c in regex:
         if c == '(':
             openedBrackets += 1
         if c == ')':
             openedBrackets -= 1
         if openedBrackets < 0:
-            print('ERROR missing bracket')
+            print('Falta (')
             return False
     if openedBrackets == 0:
         return True
-    print('ERROR unclosed brackets')
+    print('Falta )')
     return False    
 # Validação de Operações
 def validOperations(regex: str) -> bool:
@@ -26,26 +27,26 @@ def validOperations(regex: str) -> bool:
     for i, c in enumerate(regex):
         if c == '*':
             if i == 0:
-                print('ERROR * with no argument at', i)
+                print('* sem termo em', i)
                 return False
             if regex[i - 1] in '(|':
-                print('ERROR * with no argument at', i)
+                print('* sem termo em', i)
                 return False
         if c == '|':
             if i == 0 or i == len(regex) - 1:
-                print('ERROR | with missing argument at', i)
+                print('| com falta de termo em', i)
                 return False
             if regex[i - 1] in '(|':
-                print('ERROR | with missing argument at', i)
+                print('| com falta de termo em', i)
                 return False
             if regex[i + 1] in ')|':
-                print('ERROR | with missing argument at', i)
+                print('E| com falta de termo em', i)
                 return False
     return True
 
 class RegexNode:
 
-    def __init__(self, regex: str, alphabet: set):
+    def __init__(self, regex: str, alphabet: set) -> None:
         self.__alphabet = alphabet
         self.__nullable = None
         self.__firstpos: List[int] = []
@@ -151,22 +152,22 @@ class RegexNode:
     
     ######################################### PUBLIC #########################################
 
-    def calcFunctions(self, pos: int, followpos: List[str]):
+    def calcFunctions(self, pos: int, followpos: List[str]) -> int:
+        # Se for uma folha
         if self.__isLetter(self.__item):
-            #Is a leaf
             self.__firstpos = [pos]
             self.__lastpos = [pos]
             self.__position = pos
-            #Add the position in the followpos list
+            # Adiciona a posição atual no followpos
             followpos.append([self.__item,[]])
             return pos+1
-        #Is an internal node
+        # Se é um nodo interno
         for child in self.__children:
             pos = child.calcFunctions(pos, followpos)
-        #Calculate current functions
+            # Calcula as funções dos filhos
 
+        # É um concat
         if self.__item == '.':
-            #Is concatenation
             #Firstpos
             if self.__children[0].nullable:
                 self.__firstpos = sorted(list(set(self.__children[0].firstpos + self.__children[1].firstpos)))
@@ -185,8 +186,8 @@ class RegexNode:
                     if j not in followpos[i][1]:
                         followpos[i][1] = sorted(followpos[i][1] + [j])
 
+        # É um ou
         elif self.__item == '|':
-            #Is or operator
             #Firstpos
             self.__firstpos = sorted(list(set(self.__children[0].firstpos + self.__children[1].firstpos)))
             #Lastpos
@@ -194,8 +195,8 @@ class RegexNode:
             #Nullable
             self.__nullable = self.__children[0].__nullable or self.__children[1].__nullable
 
+        # É um fecho de kleene
         elif self.__item == '*':
-            #Is kleene
             #Firstpos
             self.__firstpos = deepcopy(self.__children[0].firstpos)
             #Lastpos
@@ -221,12 +222,17 @@ class RegexTree:
 
     ######################################### PRIVATE #########################################
 
+    # Valida se o regex é valido e prepara ele para ser processado
     def __preProcess(self, regex) -> str:
+        # Valida
         if not isValidRegex(regex):
+            print('Regex inválido')
             exit()
         regex = self.__cleanKleene(regex)
         regex = regex.replace(' ','')
+        # Coloca tudo entre ()s e adiciona fim de sentença
         regex = '(' + regex + ')' + '#'
+        # Remove ()s desnecessários
         while '()' in regex:
             regex = regex.replace('()','')
         return regex
@@ -237,60 +243,68 @@ class RegexTree:
                 regex = regex[:i] + regex[i + 1:]
         return regex
     
+    # Calcula as funções firstpos, lastpos e followpos
     def __functions(self) -> None:
         self.__root.calcFunctions(0, self.__followpos)
     
     ######################################### PUBLIC #########################################
 
+    # Converte para um Automato Finito Deterministico
     def toDfa(self) -> 'FiniteAutomata':
 
-        def containsHashtag(q) -> bool:
+        def containsHashtag(q: List[int]) -> bool:
             for i in q:
                 if self.__followpos[i][0] == '#':
                     return True
             return False
 
-        markedStates = [] #Marked states
-        statesList = [] #States list in the followpos form ( array of positions ) 
-        rAlphabet = self.__alphabet - {'#', '&'} #Automata alphabet
-        transitions = set() #Delta function, an array of dictionaries d[q] = {x1:q1, x2:q2 ..} where d(q,x1) = q1, d(q,x2) = q2..
-        acceptanceStates = set() #FInal states list in the form of indexes (int)
-        q0 = self.__root.firstpos
+        markedStates = [] # Estados marcados
+        statesList = [] # Lista de psoições na forma de followpos ( array de posições ) 
+        rAlphabet = self.__alphabet - {'#', '&'} # Alfabeto
+        transitions = set() # Conjunto de transições ( conjunto de tuplas )
+        acceptanceStates = set() #Estados de aceitação na forma de indices
+        q0 = self.__root.firstpos # Estado inicial
 
+        # Adiciona q0 na lista de estados, e se ele for de aceitação, adiciona para conjunto aceitação
         statesList.append(q0)
         if containsHashtag(q0):
+            # Como se trabalha com indices, é transformado em string
             acceptanceStates.add('q'+str(statesList.index(q0)))
         
+        # Enquanto existir estados não marcados
         while len(statesList) - len(markedStates) > 0:
-            #There exists one unmarked
-            #We take one of those
+            # Escolhemos um estatado não marcado para gerar transições
             q = [i for i in statesList if i not in markedStates][0]
-            #Generating the delta dictionary for the new state
-            #We mark it
+            # Marcando e estado escolhido
             markedStates.append(q)
-            #For each letter in the automata's alphabet
+            # Para cada letra do alfabeto
             for a in rAlphabet:
-                # Compute destination state ( d(q,a) = U )
+                # Encontra-se o destino U ( δ(q,a) = U )
                 U = []
-                #Compute U
-                #foreach position in state
+                # Para cada posição em q
                 for i in q:
-                    #if i has label a
+                    # Se possui o a
                     if self.__followpos[i][0] == a:
-                        #We add the position to U's composition
+                        # Adicionamos a U
                         U = U + self.__followpos[i][1]
+                # Removendo repitidos e ordenando U
                 U = sorted(list(set(U)))
-                #Checking if this is a valid state
+                # Verifica se U é vazio
                 if len(U) == 0:
-                    #No positions, skipping, it won't produce any new states ( also won't be final )
+                    # Se vazio, ignora
                     continue
+                # Se ainda não está na lista de estados
                 if U not in statesList:
                     statesList.append(U)
+                    # Se final, adiciona em lista de finais
                     if containsHashtag(U):
                         acceptanceStates.add('q'+str(statesList.index(U)))
-                #d(q,a) = U
+                # δ = (estado q, destino U, simbolo a)
                 transitions.add(('q'+str(statesList.index(q)),'q'+str(statesList.index(U)),a))
         states = set()
+        # Transforma os estados em indice em strings qi
         for state in statesList:
             states.add('q'+str(statesList.index(state)))
-        return FiniteAutomata(states,rAlphabet,transitions,'q'+str(statesList.index(q0)),acceptanceStates)
+        new = FiniteAutomata(states,rAlphabet,transitions,'q'+str(statesList.index(q0)),acceptanceStates)
+        new.outputToFile('RegexToDFA')
+        return new
