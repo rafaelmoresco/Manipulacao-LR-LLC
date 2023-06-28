@@ -1,3 +1,6 @@
+from reader import Reader
+from FiniteAutomata import FiniteAutomata
+
 class GR():
     def __init__(self):
         pass
@@ -15,7 +18,7 @@ class GR():
         f = self.getEstadosFinais(af)
         # Definir P
         gr = af[1:]
-        grFinal = []
+        grFinal = [] 
         aux = []
         # Cria lista transformando os estados da AF em não terminais da gramatica 
         for elemento in gr:
@@ -70,34 +73,45 @@ class GR():
         for index, linha in enumerate(gr):
             for element in linha[1:]:
                 # Se a produção não é somente um terminal
-                if("|" in element):
-                    # Separa o terminal do não terminal (o formato usado é a|A, por exemplo)
+                if("," in element):
+                    # Separa o terminal do não terminal (o formato usado é a,A)
                     # Depois de separado, o ele procura a coluna que possui aquele terminal e coloca o não terminal na linha que está
                     # sendo trabalhada, porém na coluna referente ao terminal identificado
-                    auxiliar = element.split("|")
+                    auxiliar = element.split(",")
                     indice = af[0].index(auxiliar[0])
                     af[index+1][indice].append(auxiliar[1])
                 # Se a produção for somente um terminal
                 else:
-                    # Se for terminal, precisamos garantir também a transação também para o estado de aceitação
+                    # Se for terminal, precisamos garantir também a transação para o estado de aceitação (criando não determinismo)
                     indice = af[0].index(element)
-                    af[index+1][indice].append("Aceitacao")
-                    # Caso o terminal analizado leve para um estado não terminal, precisamos colocar esse estado como estado de aceitação
-                    for elementos in linha[1:]:
-                        if(element + '|' in elementos):
-                            uxiliar = elementos.split("|")
-                            for indices ,linhas in enumerate(af):
-                                # Depois de identificado, colocamos então a marcação nos estados de aceitação identificados
-                                if (linha[0] == uxiliar[1] and '*' not in af[indice+1][0]):
-                                    af[indice+1][0] = '*'+af[indice+1][0]
+                    af[index+1][indice].append("X")
         #print(af)
-        self.printAF(af)
+        return self.convertToAF(af)
 
     # Método de print do AF
-    def printAF(self, afFinal):
+    def convertToAF(self, afFinal):
+        afFinal[1][0] = '->' + afFinal[1][0]
         for linhas in afFinal:
-            print(linhas)
+            linhas[0] = linhas[0].replace("-", "").replace(">", "").replace("*", "")
+            for elements in linhas:
+                if elements == []:
+                    elements.append("-")
 
+        setTuplas = []
+        for linha in afFinal[1:]:
+            for index, element in enumerate(linha[1:]):
+                if (len(element) == 1):
+                    if(element == ['-']):
+                        break
+                    else:
+                        a = (linha[0],element[0],afFinal[0][index+1])
+                        setTuplas.append(a)
+                else:
+                    for estados in element:
+                        a = (linha[0],estados[0],afFinal[0][index+1])
+                        setTuplas.append(a)
+        return FiniteAutomata(set(self.getConjuntoEstados(afFinal)), set(self.getConjuntoSimbolos(afFinal)), set(setTuplas), afFinal[1][0], {'X'})
+ 
     # Retorna símbolo inicial da gramática
     def getSimboloInicial(self, gr):
         return gr[0][0]
@@ -107,8 +121,8 @@ class GR():
         conjuntoTerminais = []
         for linha in gr:
             for i in range(1, len(linha)):
-                if('|' in linha[i]):
-                    aux = linha[i].split('|')
+                if(',' in linha[i]):
+                    aux = linha[i].split(',')
                     if(aux[0] not in conjuntoTerminais):
                         conjuntoTerminais.append(aux[0])
                 else:
@@ -121,19 +135,23 @@ class GR():
         conjuntoNaoTerminais = []
         for linha in gr:
             conjuntoNaoTerminais.append(linha[0])
-        conjuntoNaoTerminais.append('*Aceitacao')
+        conjuntoNaoTerminais.append('*X')
         return conjuntoNaoTerminais
 
     # Printa a GR formatada
     def printGR(self, grFinal):
+        arquivo = open("ResultadoGR.txt", "a")
         for linha in grFinal:
             for i in range(0, len(linha)):
                 if(i == 0):
-                    valor = linha[i].replace("*", "")
-                    print(valor, end="")
-                else:
-                    print(" ," + linha[i], end="")
-            print('\n')
+                    valor = linha[i].replace("*", "").replace("->", "")
+                    arquivo.write(valor + " ->")
+                elif(i == 1):
+                    arquivo.write(" " + linha[i])
+                else: 
+                    arquivo.write(" | " + linha[i])
+            arquivo.write('\n')
+        arquivo.close()
 
     # Retorna estados da AF
     def getConjuntoEstados(self, af):
@@ -199,10 +217,14 @@ questao7 = [['X', 'a', 'b'],
  ['*S4', 'S4', 'S5'],
  ['*S5', 'S1', 'S5']]
 
-ex_gr = [['->S', 'a|A', 'b|B', 'b'],
-         ['A', 'a|S'],
-         ['B', 'b|B', 'b']]
+af_det = [['X','a','b','c'],
+          ['->*S','A','B','C'],
+          ['*A','-','B','C'],
+          ['*B','A','-','C'],
+          ['*C','-','-','C']]
 
 teste = GR()
-#teste.AFparaGR(questao7)
-teste.GRparaAF(ex_gr)
+teste2 = Reader()
+#teste.AFparaGR(af_det)
+piroca = teste.GRparaAF(teste2.readGr('input_gr_2.txt'))
+piroca.outputToFile("GrToAf")

@@ -35,5 +35,22 @@ class Reader():
 
         return FiniteAutomata(states, set(alphabet), transitions, initialState, acceptanceStates)
 
-    def readGr():
-        pass
+    def readGr(self, fileName: str):
+        content = self.__readFile(fileName)
+        grFormatada = []
+
+        for i in range(0, len(content)):
+            linha = content[i].replace(' ', '').strip('\n').split('->')
+            aux = linha[1].split('|')
+            for i in range(0, len(aux)):
+                linha.append(aux[i])
+            linha.pop(1)
+            grFormatada.append(linha)
+
+        for i, linha in enumerate(grFormatada):
+            for j, element in enumerate(linha):
+                if (len(element) > 1):
+                    grFormatada[i][j] = element[:1] + ',' + element[1:]
+        
+        return grFormatada
+
