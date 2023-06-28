@@ -6,10 +6,11 @@ from ContextFreeGrammar import ContextFreeGrammar
 from RegEx import RegexTree
 
 reader = Reader()
+# glc = reader.readGLC('testes/glc_recursiva.txt')
+# glc.removeLeftmostRecursions()
+# print(glc)
 glc = reader.readGLC('testes/glc_firsts_follows.txt')
-print(glc.firsts)
-print(glc.follows)
-# finiteAutomataUtils = FiniteAutomataUtils()
+glc.read('abc')
 
 # AVAILABLE_OPERATIONS = ["disponivel", "determinizarAF", "minimizarAF", "uniaoAF", "intersecaoAF", "regex", "leituraAF", "GRparaAF", "AFparaGR", "sair"]
 

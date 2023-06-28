@@ -238,17 +238,18 @@ class ContextFreeGrammar:
         # Condição de parada
         if len(production) == 0:
             return [tuple()]
+        out = []
         # Se o símbolo mais a esquerda da produção é terminal, 
         # retorna uma lista contendo esse símbolo concatenado a todas as derivações possíveis
         # dos símbolos posteriores
         if production[0] in self.__terminals:
-            return [production[0] + ''.join(prod) for prod in self.__derive(production[1:])]
+            for d in self.__derive(production[1:]):
+                newProd = production[0] + ' ' + ' '.join(d)
+                out.append(tuple(newProd.strip().split(' ')))
         # Se for um não terminal e possuir produções a partir dele
         elif production[0] in self.__productions:
-            out = [] # produções de saída
             # obtém todas as derivações possíveis dos símbolos posteriores
             derivations = self.__derive(production[1:])
-            a = 1
             # então, pra cada produção pelo símbolo mais a esquerda
             for prod in self.__productions[production[0]]:
                 # se a produção é &, copia todas as derivações possíveis dos símbolos à direita, anulando o símbolo à esquerda
@@ -256,8 +257,10 @@ class ContextFreeGrammar:
                     out += derivations
                 # se não, copia a produção e concatena todas as derivações possíveis dos símbolos à direita
                 else:
-                    out += [''.join(prod) + ''.join(d) for d in derivations]
-            return out
+                    for d in derivations:
+                        newProd = ' '.join(prod) + ' ' + ' '.join(d)
+                        out.append(tuple(newProd.strip().split(' ')))
+        return out
     
     def __getPrefixesOfProductions(self) -> Dict[str, List[Tuple]]:
         '''Retorna um dicionario contendo símbolo como chave e uma lista de tuplas de terminais contendo os maiores prefixos possíveis por símbolo/produção'''
@@ -378,7 +381,34 @@ class ContextFreeGrammar:
                 newProd = tuple('&') if prod == tuple('&') else prod + (newSymbol,)
                 self.__productions[symbol].add(newProd)
 
+    def __buildParser(self) -> None:
+        self.removeLeftmostRecursions()
+        self.factorate()
+        self.__calcFirsts()
+        self.__calcFollows()
+        for symbol in self.__nonTerminals:
+            # Se há intersecção entre firsts e follows para os símbolos que possuem & em firsts
+            if '&' not in self.__firsts[symbol]: continue
+            if self.__firsts[symbol].intersection(self.__follows[symbol]):
+                print("Linguagem não é LL(1)")
+                return
+        self.__buildLL1Table()
+    
+    def __buildLL1Table(self) -> None:
+        table = {}
+        for symbol in self.__nonTerminals:
+            if symbol not in self.__productions: continue
+            for prod in self.__productions[symbol]:
+                pf = self.__getFirstsFromProduction(prod)
+                if '&' in pf:
+                    for terminal in self.__follows[symbol]:
+                        table[(symbol, terminal)] = prod
+                    pf.remove('&')
+                for terminal in pf:
+                    table[(symbol, terminal)] = prod
         
+        print(table)
+
     ######################################### PUBLIC #########################################
     def outputToFile(self, filepath='gerados/GLC.txt'):
         '''Transforma as produções e as escreve em um arquivo em forma de gramática'''
@@ -408,4 +438,9 @@ class ContextFreeGrammar:
         for symbol in self.__productions.copy():
             self.__convertLeftmostIndirectRecursionsOfSymbol(symbol)
             self.__removeLeftmostDirectRecursionsOfSymbol(symbol)
+    
+    def read(self, word: str) -> bool:
+        self.__buildParser()
         
+        word = word + '$'
+        #...
