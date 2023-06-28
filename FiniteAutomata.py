@@ -434,9 +434,6 @@ class FiniteAutomata:
             return True
         else:
             return False
-    
-            
-
 
     ######################################### PUBLIC #########################################
     
@@ -500,7 +497,6 @@ class FiniteAutomata:
             self.__convertEpsilonTransitions()
         # Converte em um automato determinístico
         self.__convertIndeterministicTransitions()
-        self.outputToFile('FA_determinize')
         return self
 
     def minimize(self) -> 'FiniteAutomata':
@@ -518,7 +514,6 @@ class FiniteAutomata:
         
         # Calcula as classes de equivalência e substitui/remove as redundantes
         self.__removeEquivalents()
-        self.outputToFile('FA_minimize')
         return self
 
     def read(self, word: str) -> bool:
