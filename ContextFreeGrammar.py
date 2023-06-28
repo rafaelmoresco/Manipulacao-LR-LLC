@@ -82,6 +82,7 @@ class ContextFreeGrammar:
     
     def __getFirstsFromProduction(self, prod: str) -> Set[str]:
         '''Calcula e retorna os firsts de uma determinada cadeia/produção'''
+        if prod == tuple('&'): return set('&')
         firsts = set()
         isProdNullable = True
         # Pra cada símbolo na produção
@@ -114,8 +115,10 @@ class ContextFreeGrammar:
         
         # Condição de parada, se é terminal, retorna sí mesmo
         if symbol in self.__terminals:
-            self.__firsts[symbol] = set(symbol)
-            return set(symbol)
+            set_ = set() # hack necessario pq symbol pode ser um terminal de vários símbolos (ex. "co")
+            set_.add(symbol) # assim, set(symbol) ficaria {'c', 'o'}
+            self.__firsts[symbol] = set_
+            return set_
         
         firsts = set()
         # Pra cada produção pelo símbolo
@@ -383,11 +386,12 @@ class ContextFreeGrammar:
 
     def __buildParser(self) -> None:
         self.removeLeftmostRecursions()
-        self.factorate()
+        # self.leftFactor()
         self.__calcFirsts()
         self.__calcFollows()
+        # Detecta se há intersecção entre firsts e follows para os símbolos que possuem & em firsts
+        # Se há, a linguagem não é LL(1)
         for symbol in self.__nonTerminals:
-            # Se há intersecção entre firsts e follows para os símbolos que possuem & em firsts
             if '&' not in self.__firsts[symbol]: continue
             if self.__firsts[symbol].intersection(self.__follows[symbol]):
                 print("Linguagem não é LL(1)")
@@ -399,12 +403,12 @@ class ContextFreeGrammar:
         for symbol in self.__nonTerminals:
             if symbol not in self.__productions: continue
             for prod in self.__productions[symbol]:
-                pf = self.__getFirstsFromProduction(prod)
-                if '&' in pf:
+                prodFirsts = self.__getFirstsFromProduction(prod)
+                if '&' in prodFirsts:
                     for terminal in self.__follows[symbol]:
                         table[(symbol, terminal)] = prod
-                    pf.remove('&')
-                for terminal in pf:
+                    prodFirsts.remove('&')
+                for terminal in prodFirsts:
                     table[(symbol, terminal)] = prod
         
         print(table)
@@ -415,22 +419,20 @@ class ContextFreeGrammar:
         with open(filepath, 'w') as file:
             file.write(self.__productionsToStr())
 
-    def factorate(self, depth=10) -> bool:
+    def leftFactor(self, depth=10) -> None:
         '''Fatora a gramática, tentando converter, a cada iteração, as produções não determinísticas diretas e depois indiretas'''
         # Remove nao determinismos diretos
         self.__removeDirectNonDeterministicProductions()
-        isFactorable = False
         for _ in range(depth):
-            # Converte não determinismo indiretos em diretos
+            # Detecta nao determinismos indiretos
             indirectNonDetProds = self.__getIndirectNonDeterministicProductions()
+            # Se nao houve detecçao de indiretos, nao precisa de outra iteração
+            if not indirectNonDetProds:
+                break
+            # Converte não determinismo indiretos em diretos
             self.__convertIndirectNonDeterministicProductions(indirectNonDetProds)
             # Remove nao determinismos diretos restantes
             self.__removeDirectNonDeterministicProductions()
-            # Se nao houve detecçao de indiretos, nao precisa de outra iteração
-            if not indirectNonDetProds:
-                isFactorable = True
-                break
-        return isFactorable
 
     def removeLeftmostRecursions(self) -> None:
         '''Atualiza a gramática convertendo e removendo as recursões à esquerda'''        
