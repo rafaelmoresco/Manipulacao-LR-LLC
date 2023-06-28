@@ -101,6 +101,22 @@ class ContextFreeGrammar:
         if isProdNullable: firsts.add('&')
         return firsts
     
+    def __isND(self) -> bool:
+        '''Verifica se a gramatica é não fatorada'''
+        for symbol in self.__productions:
+            listFinals = []
+            for production in self.__productions[symbol]:
+                # Monta uma lista com todos os firsts de cada produção no símbolo
+                listFinals.append(self.__getFirstsFromProduction(production))
+            # Percorre a lista gerada, e se consegue chegar no mesmo first pelos dois lados da produção, retorna que não é fatorada
+            for item in listFinals:
+                for content in item:
+                    for anoterOne in listFinals:
+                        if listFinals.index(item) != listFinals.index(anoterOne):
+                            if content in anoterOne and content != '&':
+                                return True
+        return False
+
     #################### Regras/Lógicas ####################
     def __calcFirsts(self) -> None:
         '''Calcula os firsts de cada símbolo não terminal e atualiza o atributo __firsts'''
@@ -386,7 +402,8 @@ class ContextFreeGrammar:
 
     def __buildParser(self) -> None:
         self.removeLeftmostRecursions()
-        # self.leftFactor()
+        if self.__isND():    
+            self.leftFactor()
         self.__calcFirsts()
         self.__calcFollows()
         # Detecta se há intersecção entre firsts e follows para os símbolos que possuem & em firsts
