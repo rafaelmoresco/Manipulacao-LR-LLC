@@ -12,6 +12,8 @@ class ContextFreeGrammar:
         self.__productions: Dict[str, Set[Tuple]] = productions
         self.__firsts: Dict[str, Set[str]] = dict()
         self.__follows: Dict[str, Set[str]] = dict()
+        # A tabela ll1 é um dicionario com chave sendo uma tupla (Estado, transição) e a chave a produção
+        self.__ll1Table: Dict[Tuple[str, str], Tuple[str]] = dict()
 
     @property
     def initialSymbol(self) -> str:
@@ -384,34 +386,83 @@ class ContextFreeGrammar:
                 newProd = tuple('&') if prod == tuple('&') else prod + (newSymbol,)
                 self.__productions[symbol].add(newProd)
 
+    def __buildLL1Table(self) -> None:
+        '''Constrói a tabela LL(1) da gramática e setta o atributo'''
+        table = {}
+        for symbol in self.__productions:
+            for prod in self.__productions[symbol]:
+                # Pra cada produção por símbolo nao terminal
+                # Obtem os firsts da produção
+                prodFirsts = self.__getFirstsFromProduction(prod)
+                # Se a produção gera palavra vazia
+                if '&' in prodFirsts:
+                    # pra cada follow do símbolo adiciona
+                    # o símbolo como estado, o follow como transicao e & como produção
+                    for terminal in self.__follows[symbol]:
+                        table[(symbol, terminal)] = prod
+                    prodFirsts.remove('&') # remove pra iterar
+                # Pra cada first da produção adiciona 
+                # o símbolo como estado, o first como transicao e a produção inteira como produção
+                for terminal in prodFirsts:
+                    table[(symbol, terminal)] = prod
+        
+        self.__ll1Table = table
+
     def __buildParser(self) -> None:
+        '''Caso a gramática seja LL(1), constrói o parser'''
         self.removeLeftmostRecursions()
         # self.leftFactor()
         self.__calcFirsts()
         self.__calcFollows()
         # Detecta se há intersecção entre firsts e follows para os símbolos que possuem & em firsts
-        # Se há, a linguagem não é LL(1)
+        # Se há, a gramatica não é LL(1)
         for symbol in self.__nonTerminals:
             if '&' not in self.__firsts[symbol]: continue
             if self.__firsts[symbol].intersection(self.__follows[symbol]):
-                print("Linguagem não é LL(1)")
+                print("Gramática não é LL(1)")
                 return
         self.__buildLL1Table()
-    
-    def __buildLL1Table(self) -> None:
-        table = {}
-        for symbol in self.__nonTerminals:
-            if symbol not in self.__productions: continue
-            for prod in self.__productions[symbol]:
-                prodFirsts = self.__getFirstsFromProduction(prod)
-                if '&' in prodFirsts:
-                    for terminal in self.__follows[symbol]:
-                        table[(symbol, terminal)] = prod
-                    prodFirsts.remove('&')
-                for terminal in prodFirsts:
-                    table[(symbol, terminal)] = prod
         
-        print(table)
+    def __isValidSentenceFromStackAutomata(self, sentence: List[str]) -> bool:
+        '''Simula um automato de pilha através da tabela ll1 construída e valida a sentença passada'''
+        sentence += '$' # Adiciona final de sentença
+        
+        # Inicializa o automato de pilha adicionando final de sentença e símbolo inicial na pilha
+        cursor = 0
+        stack = ['$']
+        stack.append(self.__initialSymbol)
+        
+        while True:
+            # Pega elemento ao topo da pilha
+            top = stack[-1]
+            # Pega símbolo de entrada na posição do cabeçote
+            symbol = sentence[cursor]
+            # Se o último elemento da pilha é &, retira e continua
+            if top == '&':
+                stack.pop()
+                continue
+            # Se zerou a pilha e está no final de sentença, aceita!
+            if top == '$' and symbol == '$':
+                return True
+            # Se não, se o topo da pilha é igual ao símbolo no cabeçote
+            elif top == symbol:
+                # Desempilha e avança o cabeçote
+                stack.pop()
+                cursor += 1
+            # Se não
+            else:
+                # Procura na tabela ll(1) pela próxima produção do símbolo do topo da pilha pelo símbolo no cabeçote
+                if not self.__ll1Table.get((top, symbol)):
+                    # Se não encontra, recusa!
+                    return False
+                prod = list(self.__ll1Table[(top, symbol)])
+                prod.reverse() # inverte a ordem
+                
+                # Desempilha o último símbolo e empilha a produção
+                stack.pop()
+                for p in prod:
+                    stack.append(p)
+                
 
     ######################################### PUBLIC #########################################
     def outputToFile(self, filepath='gerados/GLC.txt'):
@@ -441,8 +492,9 @@ class ContextFreeGrammar:
             self.__convertLeftmostIndirectRecursionsOfSymbol(symbol)
             self.__removeLeftmostDirectRecursionsOfSymbol(symbol)
     
-    def read(self, word: str) -> bool:
-        self.__buildParser()
-        
-        word = word + '$'
-        #...
+    def read(self, sentence: str) -> bool:
+        '''Verifica se a gramática gera a sentença passada'''
+        if not self.__ll1Table: self.__buildParser()
+        # converte a sentença em simbolos terminais
+        sentence = sentence.split(' ')
+        return self.__isValidSentenceFromStackAutomata(sentence)
