@@ -2,6 +2,7 @@ from reader import Reader
 from FiniteAutomata import FiniteAutomata
 from FiniteAutomataUtils import FiniteAutomataUtils
 from RegularGrammar import GR
+from ContextFreeGrammar import ContextFreeGrammar
 from RegEx import RegexTree
 
 reader = Reader()
@@ -65,6 +66,5 @@ while True:
         regularGrammar.AFparaGR(inputAutomata)
     elif x == "sair":
         exit()
-        break
     else:
         print("Operação Inválida!")
