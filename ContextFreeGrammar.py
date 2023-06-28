@@ -39,7 +39,7 @@ class ContextFreeGrammar:
     
     @property
     def specialChars(self) -> List[str]:
-        return ['!','@',"'",'#']
+        return ["'",'!']
 
     def __str__(self) -> str:
         return f'Símbolo inicial: {self.__initialSymbol}\n' +\
@@ -159,7 +159,7 @@ class ContextFreeGrammar:
         return nonDetProds
             
     def __convertIndirectNonDeterministicProductions(self, indirectNonDetProds: Dict[str, Set[Tuple]]):
-        '''Percorre a gramática, convertendo as transições não determinísticas indiretas passadas em diretas'''
+        '''Percorre a gramática, convertendo as produções não determinísticas indiretas passadas em diretas'''
         for symbol in self.__productions:
             # Remove as produções não determinísticas da gramática
             for prod in indirectNonDetProds.get(symbol, []):
@@ -238,8 +238,8 @@ class ContextFreeGrammar:
             nonDetProds[symbol] = processedProds
         return nonDetProds
 
-    def __removeDirectNonDeterministicProductions(self):
-        '''Percorre a gramática, convertendo as transições não determinísticas diretas em determinísticas, criando novos símbolos e atualizando o dicionário'''
+    def __removeDirectNonDeterministicProductions(self) -> None:
+        '''Percorre a gramática, convertendo as produções não determinísticas diretas em determinísticas, criando novos símbolos e atualizando o dicionário'''
         allSymbolsPrefixes = self.__getPrefixesOfProductions()
         productions = self.__productions # copia __productions
         self.__productions = {} # zera productions para utilizar __addProduction
@@ -271,6 +271,62 @@ class ContextFreeGrammar:
                 else:
                     self.__addProduction(symbol, prefix)
 
+    def __removeCircularProductions(self) -> None:
+        '''Remove produções circulares unitárias, ex: A -> A'''
+        for sym in self.__productions:
+            for _ in self.__productions[sym].copy():
+                self.__productions[sym].discard(tuple(sym))
+    
+    def __convertLeftmostIndirectRecursionsOfSymbol(self, symbol: str) -> None:
+        '''Percorre a gramática, convertendo as produções não recursivas à esquerda indiretas em diretas do símbolo não terminal passado'''
+        # calcula índice do símbolo
+        i = list(self.__productions.keys()).index(symbol)
+
+        # Para cada símbolo não terminal anterior (na ordem da gramática)
+        for previousSymbol in list(self.__productions.keys())[:i]:
+            # Percorre todas as produções do símbolo original, procurando por recursoes à esquerda dos símbolos anteriores
+            for prod in self.__productions[symbol].copy():
+                if prod[0] != previousSymbol: continue
+                # Se encontra essas recursões indiretas, remove essas produções recursivas
+                self.__removeProduction(symbol, prod)
+                # Adiciona novas produções para o símbolo original, com todas as derivações possíveis da produção antes recursiva
+                # Ou seja, substitui as produções recursivas indiretas por recursivas diretas
+                for previousProd in self.__productions[previousSymbol]:
+                    if previousProd != tuple('&'):
+                        self.__addProduction(symbol, previousProd + prod[1:])
+                    else:
+                        self.__addProduction(symbol, prod[1:])
+    
+    def __removeLeftmostDirectRecursionsOfSymbol(self, symbol: str) -> None:
+        # Detecta por recursoes diretas à esquerda, separando as producoes em duas listas
+        recursives, nonRecursives = [], []
+        for prod in self.__productions[symbol]:
+            if prod[0] == symbol:
+                recursives.append(prod[1:]) # adiciona à lista removendo o símbolo recursivo à esquerda
+            else:
+                nonRecursives.append(prod)
+        
+        # Se há recursoes
+        if recursives:
+            # Cria novo símbolo
+            newSymbol = symbol+'!'
+            self.__nonTerminals.add(newSymbol)
+            
+            # Substitui as producoes.
+            # Para as producoes recursivas, adiciona novas producoes pelo novo símbolo
+            # concatenando a produção recursiva (sem a recursao à esquerda) com o novo símbolo criado. Também adiciona & como produção
+            self.__productions[newSymbol] = set(tuple('&'))
+            for prod in recursives:
+                newProd = prod + (newSymbol,)
+                self.__productions[newSymbol].add(prod + (newSymbol,))
+            # Para as produções nao recursivas, adiciona novas produções pelo símbolo original
+            # concatenando a produção nao recursiva com o novo símbolo criado
+            self.__productions[symbol] = set()
+            for prod in nonRecursives:
+                newProd = tuple('&') if prod == tuple('&') else prod + (newSymbol,)
+                self.__productions[symbol].add(newProd)
+
+        
     ######################################### PUBLIC #########################################
     def writeToFile(self, filepath='gerados/GLC.txt'):
         '''Transforma as produções e as escreve em um arquivo em forma de gramática'''
@@ -281,17 +337,20 @@ class ContextFreeGrammar:
         '''Fatora a gramática, tentando converter, a cada iteração, as produções não determinísticas diretas e depois indiretas'''
         # Remove nao determinismos diretos
         self.__removeDirectNonDeterministicProductions()
-        
         for _ in range(depth):
             # Converte não determinismo indiretos em diretos
             indirectNonDetProds = self.__getIndirectNonDeterministicProductions()
             self.__convertIndirectNonDeterministicProductions(indirectNonDetProds)
             # Remove nao determinismos diretos restantes
             self.__removeDirectNonDeterministicProductions()
-            
-            if not indirectNonDetProds: 
+            # Se nao houve detecçao de indiretos, nao precisa de outra iteração
+            if not indirectNonDetProds:
                 break
 
     def removeLeftmostRecursions(self) -> None:
-        '''Atualiza a gramática removendo e convertendo as recursões à esquerda'''
-        pass
+        '''Atualiza a gramática convertendo e removendo as recursões à esquerda'''        
+        self.__removeCircularProductions()
+        for symbol in self.__productions.copy():
+            self.__convertLeftmostIndirectRecursionsOfSymbol(symbol)
+            self.__removeLeftmostDirectRecursionsOfSymbol(symbol)
+        
