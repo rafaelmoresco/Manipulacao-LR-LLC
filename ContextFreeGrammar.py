@@ -83,6 +83,13 @@ class ContextFreeGrammar:
         for symbol in self.__productions:
             self.__getAndSetFirstsOfSymbol(symbol)
     
+    def __calcFollows(self) -> None:
+        '''Calcula os follows de cada símbolo'''
+        for symbol in self.__productions:
+            self.__follows[symbol] = {}
+        for symbol in self.__productions:
+            self.__getAndSetFollowsOfSymbol(symbol)
+
     #################### Regras/Lógicas ####################
     def __getFirstsFromProduction(self, prod: str) -> Set[str]:
         '''Calcula e retorna os firsts de uma determinada cadeia/produção'''
@@ -126,6 +133,37 @@ class ContextFreeGrammar:
                 firsts = firsts.union(self.__getFirstsFromProduction(prod))
         self.__firsts[symbol] = firsts.copy()
         return firsts
+
+    def __getAndSetFollowsOfSymbol(self, symbol: str) -> Set[str]:
+        '''Calcula e retorna os follows para o símbolo, atualizando o atributo firsts da classe'''
+
+        follows = set()
+        if symbol == self.__initialSymbol:
+            follows.add('$')
+        try:
+            follows = follows.union(self.__follows[symbol])
+        except:
+            pass
+        for key, values in self.__productions.items():
+            for transition in values:
+                for i, element in enumerate(transition):
+                    if element == symbol:
+                        copy = int(i)
+                        while copy < (len(transition)-1):
+                            nextSymbol = transition[copy+1]
+                            if nextSymbol in self.__terminals:
+                                follows.add(nextSymbol)
+                                break
+                            else:
+                                follows = follows.union((self.__firsts[nextSymbol]-{'&'}))
+                                if '&' in self.__firsts[nextSymbol]:
+                                    copy += 1
+                                else:
+                                    break
+                        if copy == (len(transition)-1):
+                            follows = follows.union(self.__follows[key])
+        self.__follows[symbol] = follows.copy()
+        return follows
 
     def __getIndirectNonDeterministicProductions(self) -> Dict[str, Set[Tuple]]:
         '''Percorre a gramática procurando por produções não determinística e retorna um dicionário {símbolo: produções não determinísticas}'''
@@ -333,10 +371,11 @@ class ContextFreeGrammar:
         with open(filepath, 'w') as file:
             file.write(self.__productionsToStr())
 
-    def factorate(self, depth=10) -> None:
+    def factorate(self, depth=10) -> bool:
         '''Fatora a gramática, tentando converter, a cada iteração, as produções não determinísticas diretas e depois indiretas'''
         # Remove nao determinismos diretos
         self.__removeDirectNonDeterministicProductions()
+        factorable = False
         for _ in range(depth):
             # Converte não determinismo indiretos em diretos
             indirectNonDetProds = self.__getIndirectNonDeterministicProductions()
@@ -345,7 +384,12 @@ class ContextFreeGrammar:
             self.__removeDirectNonDeterministicProductions()
             # Se nao houve detecçao de indiretos, nao precisa de outra iteração
             if not indirectNonDetProds:
+                factorable = True
                 break
+        if factorable:
+            return True
+        else:
+            return False
 
     def removeLeftmostRecursions(self) -> None:
         '''Atualiza a gramática convertendo e removendo as recursões à esquerda'''        
@@ -354,3 +398,14 @@ class ContextFreeGrammar:
             self.__convertLeftmostIndirectRecursionsOfSymbol(symbol)
             self.__removeLeftmostDirectRecursionsOfSymbol(symbol)
         
+    def buildParser(self) -> None:
+        if not self.factorate():
+            print("Não foi possivel fatorar")
+        else:
+            self.removeLeftmostRecursions()
+
+    def teste(self) -> None:
+        self.__calcFirsts()
+        self.__calcFollows()
+        print(self.__firsts)
+        print(self.__follows)
