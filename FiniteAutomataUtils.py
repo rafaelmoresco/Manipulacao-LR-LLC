@@ -22,6 +22,10 @@ class FiniteAutomataUtils():
                     newDAcceptanceStates.add(state)
         newDTransitions = self.__carteseanTransitions(d1.transitionsDict,d2.transitionsDict,newDStates)
         new = FiniteAutomata(newDStates, newDAlphabet, newDTransitions, newDInitialState, newDAcceptanceStates)
+        if union:
+            new.outputToFile('FAunion')
+        else:
+            new.outputToFile('FAintersection')
         return new
 
     

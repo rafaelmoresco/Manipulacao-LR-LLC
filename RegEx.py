@@ -305,4 +305,6 @@ class RegexTree:
         # Transforma os estados em indice em strings qi
         for state in statesList:
             states.add('q'+str(statesList.index(state)))
-        return FiniteAutomata(states,rAlphabet,transitions,'q'+str(statesList.index(q0)),acceptanceStates)
+        new = FiniteAutomata(states,rAlphabet,transitions,'q'+str(statesList.index(q0)),acceptanceStates)
+        new.outputToFile('RegexToDFA')
+        return new

@@ -1,5 +1,5 @@
 from typing import List, Tuple, Set, Dict
-
+import os.path as path
 class FiniteAutomata:
     
     def __init__(self, states: Set[str], alphabet: Set[str], transitions: Set[Tuple[str, str, str]], initialState: str, acceptanceStates: Set[str]) -> None:
@@ -431,6 +431,45 @@ class FiniteAutomata:
             return True
         else:
             return False
+    
+    def outputToFile(self, stringOp: str) -> None:
+        i: int = 0
+        while True:
+            if not path.exists('gerados/'+stringOp+str(i)+'.txt'):
+                f = open('gerados/'+stringOp+str(i)+'.txt','x')
+                break
+            else:
+                i = i+1
+        outputString = 'X'
+        orderedAlphabet = sorted(list(self.__alphabet))
+        for letter in orderedAlphabet:
+            outputString = outputString+'|'+letter
+        outputString = outputString+'\n->'+self.__initialState
+        for letter in orderedAlphabet:
+            letterTransitions = []
+            for transitions in self.__transitionsDict[self.__initialState]:
+                if letter in transitions[2] and transitions[0] == self.__initialState:
+                    letterTransitions.append(transitions[1])
+            outputString = outputString+'|'+''.join(sorted(letterTransitions))
+        outputString = outputString+'\n'
+        orderedStates = sorted(list(self.__states-{self.__initialState}))
+        for state in orderedStates:
+            if state in self.__acceptanceStates:
+                outputString = outputString+'*'+state
+            else:
+                outputString = outputString+state
+            for letter in orderedAlphabet:
+                letterTransitions = []
+                for transitions in self.__transitionsDict[state]:
+                    if letter in transitions[2] and transitions[0] == state:
+                        letterTransitions.append(transitions[1])
+                outputString = outputString+'|'+''.join(sorted(letterTransitions))
+            outputString = outputString+'\n'
+        f.write(outputString)
+        f.close
+            
+
+
     ######################################### PUBLIC #########################################
 
     def determinize(self) -> 'FiniteAutomata':
@@ -443,6 +482,7 @@ class FiniteAutomata:
             self.__convertEpsilonTransitions()
         # Converte em um automato determinístico
         self.__convertIndeterministicTransitions()
+        self.outputToFile('FA_determinize')
         return self
 
     def minimize(self) -> 'FiniteAutomata':
@@ -460,6 +500,7 @@ class FiniteAutomata:
         
         # Calcula as classes de equivalência e substitui/remove as redundantes
         self.__removeEquivalents()
+        self.outputToFile('FA_minimize')
         return self
 
     def read(self, word: str) -> bool:
