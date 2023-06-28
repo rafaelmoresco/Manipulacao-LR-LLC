@@ -156,46 +156,29 @@ class ContextFreeGrammar:
 
     def __getAndSetFollowsOfSymbol(self, symbol: str) -> Set[str]:
         '''Calcula e retorna os follows para o símbolo, atualizando o atributo follows da classe'''
-        for prod in self.__productions[symbol]:
-            for i, prodSymbol in enumerate(prod):
-                if prodSymbol not in self.__nonTerminals: continue
-
-                follows = self.__follows[prodSymbol] |\
-                    self.__collectSet(set, prod[i+1:], self.__follows[symbol]) if i + 1 < len(prod) else self.__follows[symbol]
-
-                if len(self.__follows[prodSymbol]) != len(follows):
-                    self.__follows[prodSymbol] = follows
-                
-            # # Itera sobre cada símbolo nas produções do símbolo original
-            # for i, prodSymbol in enumerate(prod):
-            #     if prodSymbol not in self.__nonTerminals: break
-            #     # Se é um símbolo nao terminal
-            #     # Se o símbolo está no final da produção
-            #     if i == len(prod)-1:
-            #         # 
-            #         self.__follows[prodSymbol] = self.__follows[prodSymbol].union(self.__follows[symbol])
-            #     # Ou, se o símbolo é acompanhado por outro símbolo
-            #     else:
-            #         nextProdSymbol = prod[i+1]
-            #         if nextProdSymbol in self.__nonTerminals:
-            #             self.__follows[prodSymbol] = self.__follows[prodSymbol].union(self.__firsts[nextProdSymbol] - {'&'})
-            #         else:
-            #             self.__follows[prodSymbol].add(nextProdSymbol)
-        
-        return self.__follows[symbol].copy()
+        follows = set()
+        follows = follows.union(self.__follows[symbol])
+        for nonTerminal, productions in self.__productions.items():
+            for prod in productions:
+                for i, prodSymbol in enumerate(prod):
+                    if prodSymbol == symbol:
+                        counter = i
+                        while counter < (len(prod)-1):
+                            nextSymbol = prod[counter+1]
+                            if nextSymbol in self.__terminals:
+                                follows.add(nextSymbol)
+                                break
+                            else:
+                                follows = follows.union((self.__firsts[nextSymbol]-{'&'}))
+                                if '&' in self.__firsts[nextSymbol]:
+                                    counter += 1
+                                else:
+                                    break
+                        if counter == (len(prod)-1):
+                            follows = follows.union(self.__follows[nonTerminal])
+        self.__follows[symbol] = follows.copy()
+        return follows
     
-    def __collectSet(self, initialSet: Set[str], items: Iterable[str], additionalSet: Set[str]) -> Set[str]:
-        set_ = initialSet
-        for i, item in enumerate(items):
-            if item in self.__nonTerminals:
-                set_ = set_ | (self.__firsts[item] - {'&'})
-                if '&' in self.__firsts[item]:
-                    if items[i+1]: continue
-                    set_ = set_ | additionalSet
-                else:
-                    set_ = set_.add(item)
-        return set_
-
     def __getIndirectNonDeterministicProductions(self) -> Dict[str, Set[Tuple]]:
         '''Percorre a gramática procurando por produções não determinística e retorna um dicionário {símbolo: produções não determinísticas}'''
         self.__calcFirsts() # Atualiza os firsts
@@ -402,10 +385,11 @@ class ContextFreeGrammar:
         with open(filepath, 'w') as file:
             file.write(self.__productionsToStr())
 
-    def factorate(self, depth=10) -> None:
+    def factorate(self, depth=10) -> bool:
         '''Fatora a gramática, tentando converter, a cada iteração, as produções não determinísticas diretas e depois indiretas'''
         # Remove nao determinismos diretos
         self.__removeDirectNonDeterministicProductions()
+        isFactorable = False
         for _ in range(depth):
             # Converte não determinismo indiretos em diretos
             indirectNonDetProds = self.__getIndirectNonDeterministicProductions()
@@ -414,7 +398,9 @@ class ContextFreeGrammar:
             self.__removeDirectNonDeterministicProductions()
             # Se nao houve detecçao de indiretos, nao precisa de outra iteração
             if not indirectNonDetProds:
+                isFactorable = True
                 break
+        return isFactorable
 
     def removeLeftmostRecursions(self) -> None:
         '''Atualiza a gramática convertendo e removendo as recursões à esquerda'''        
