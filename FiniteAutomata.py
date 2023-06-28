@@ -64,6 +64,9 @@ class FiniteAutomata:
                 transitions[initial] = {(initial, to, transition)}
             else:
                 transitions[initial].add((initial, to, transition))
+        for state in self.__states:
+            if state not in transitions.keys():
+                transitions[state] = {}
         return transitions
     
     ######################################### PRIVATE #########################################
@@ -108,8 +111,8 @@ class FiniteAutomata:
             for state in compoundStateGroup:
                 # Para cada estado, gera-se uma combinação através do índice (classesIndexMap) da classe de equivalência resultate
                 # da transição por cada símbolo. Assim, se um estado transita para a classe de índice 0 por um símbolo, e para a classe
-                # de índice 1 por outro, a combinação resultate é '01'.
-                eqClassCombination = ''
+                # de índice 1 por outro, pertencendo a classe de índice 1, a combinação resultate é '101'.
+                eqClassCombination = str(classesIndexMap[state])
                 for symbol in self.__alphabet:
                     eqClassCombination += str(classesIndexMap[self.__nextState(state, symbol)])
                 # A combinação então gerada é utilizada como chave para o dicionário, e o estado é adicionado ao valor.
@@ -455,10 +458,15 @@ class FiniteAutomata:
             outputString = outputString+'\n->'+self.__initialState
         for letter in orderedAlphabet:
             letterTransitions = []
+            exists = False
             for transitions in self.__transitionsDict[self.__initialState]:
                 if letter in transitions[2] and transitions[0] == self.__initialState:
+                    exists = True
                     letterTransitions.append(transitions[1])
-            outputString = outputString+'|'+''.join(sorted(letterTransitions))
+            if exists:
+                outputString = outputString+'|'+''.join(sorted(letterTransitions))
+            else:
+                outputString = outputString+'|'+'-'
         outputString = outputString+'\n'
         orderedStates = sorted(list(self.__states-{self.__initialState}))
         for state in orderedStates:
@@ -467,11 +475,16 @@ class FiniteAutomata:
             else:
                 outputString = outputString+state
             for letter in orderedAlphabet:
+                exists = False
                 letterTransitions = []
                 for transitions in self.__transitionsDict[state]:
                     if letter in transitions[2] and transitions[0] == state:
+                        exists = True
                         letterTransitions.append(transitions[1])
-                outputString = outputString+'|'+''.join(sorted(letterTransitions))
+                if exists:
+                    outputString = outputString+'|'+''.join(sorted(letterTransitions))
+                else:
+                    outputString = outputString+'|'+'-'
             outputString = outputString+'\n'
         f.write(outputString)
         f.close
