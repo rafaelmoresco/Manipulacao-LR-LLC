@@ -432,6 +432,11 @@ class FiniteAutomata:
         else:
             return False
     
+            
+
+
+    ######################################### PUBLIC #########################################
+    
     def outputToFile(self, stringOp: str) -> None:
         i: int = 0
         while True:
@@ -444,7 +449,10 @@ class FiniteAutomata:
         orderedAlphabet = sorted(list(self.__alphabet))
         for letter in orderedAlphabet:
             outputString = outputString+'|'+letter
-        outputString = outputString+'\n->'+self.__initialState
+        if self.__initialState in self.__acceptanceStates:
+            outputString = outputString+'\n->*'+self.__initialState
+        else:
+            outputString = outputString+'\n->'+self.__initialState
         for letter in orderedAlphabet:
             letterTransitions = []
             for transitions in self.__transitionsDict[self.__initialState]:
@@ -467,10 +475,7 @@ class FiniteAutomata:
             outputString = outputString+'\n'
         f.write(outputString)
         f.close
-            
-
-
-    ######################################### PUBLIC #########################################
+        print(stringOp+str(i)+'.txt gerado')
 
     def determinize(self) -> 'FiniteAutomata':
         '''Determiniza a instância de FiniteAutomata se for indeterminística (contendo transições por épsilon-fecho ou não), caso contrário retorna ela mesma'''
