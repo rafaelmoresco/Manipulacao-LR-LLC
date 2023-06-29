@@ -103,7 +103,7 @@ class ContextFreeGrammar:
         if isProdNullable: firsts.add('&')
         return firsts
     
-    def __isND(self) -> bool:
+    def __isNonDeterministic(self) -> bool:
         '''Verifica se a gramatica é não fatorada'''
         for symbol in self.__productions:
             listFinals = []
@@ -427,8 +427,7 @@ class ContextFreeGrammar:
     def __buildParser(self) -> None:
         '''Caso a gramática seja LL(1), constrói o parser'''
         self.removeLeftmostRecursions()
-        if self.__isND():    
-            self.leftFactor()
+        self.leftFactor()
         self.__calcFirsts()
         self.__calcFollows()
         # Detecta se há intersecção entre firsts e follows para os símbolos que possuem & em firsts
@@ -489,6 +488,8 @@ class ContextFreeGrammar:
 
     def leftFactor(self, depth=10) -> None:
         '''Fatora a gramática, tentando converter, a cada iteração, as produções não determinísticas diretas e depois indiretas'''
+        # Se não detecta não determinismos, vaza
+        if not self.__isNonDeterministic(): return
         # Remove nao determinismos diretos
         self.__removeDirectNonDeterministicProductions()
         for _ in range(depth):
