@@ -492,11 +492,13 @@ class ContextFreeGrammar:
         if not self.__isNonDeterministic(): return
         # Remove nao determinismos diretos
         self.__removeDirectNonDeterministicProductions()
+        factorable = False
         for _ in range(depth):
             # Detecta nao determinismos indiretos
             indirectNonDetProds = self.__getIndirectNonDeterministicProductions()
             # Se nao houve detecçao de indiretos, nao precisa de outra iteração
             if not indirectNonDetProds:
+                factorable = True
                 break
             # Converte não determinismo indiretos em diretos
             self.__convertIndirectNonDeterministicProductions(indirectNonDetProds)

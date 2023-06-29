@@ -7,40 +7,48 @@ class GR():
     
     def AFparaGR(self, af: FiniteAutomata, outputFilename):
         afMatriz = []
-
+        # Coloca elemento X no cabeçalho da matriz e adiciona estados em ordem
         afMatriz.append(['X'])
         for elements in sorted(af.states):
             afMatriz.append([elements])
 
+        # Garante que o estado inicial é o primeiro a aparecer na lista
         afMatriz.insert(1, afMatriz.pop(afMatriz.index([af.initialState])))
 
+        # Opera sobre e coloca o epsilon para o final
         sortedAlphabet = sorted(af.alphabet)
         if(sortedAlphabet[0] == '&'):
             sortedAlphabet.pop(0)
             sortedAlphabet.append('&')
 
+        # Coloca elementos do alfabeto na primeira linha da matriz
         for elements in sortedAlphabet:
             afMatriz[0].append(elements)
 
+        # Preenche com listas vazias onde serão colocadas as transições
         for i in range(len(afMatriz[0])-1):
             for linha in afMatriz[1:]:
                 linha.append([])
 
+        # Monta as transições 
         for tuplas in sorted(af.transitions):
             for indice ,linha in enumerate(afMatriz[1:]):
                 for index, element in enumerate(linha[1:]):
                     if(tuplas[0] == linha[0] and tuplas[2] == afMatriz[0][index+1]):
                         afMatriz[indice+1][index+1] = tuplas[1]
 
+        # Adiciona o caracter - onde não tem transições
         for linhas in afMatriz:
             for i in range(len(linhas)):
                 if (linhas[i] == []):
                     linhas[i] = '-'
 
+        # Marca estado inicial
         for estados in afMatriz[1:]:
             if(estados[0] == af.initialState):
                 estados[0] = '->' + estados[0]
 
+        # Marca estados de aceitação
         for estados in afMatriz[1:]:
             if(estados[0] in af.acceptanceStates):
                 estados[0] = '*' + estados[0]
@@ -122,7 +130,7 @@ class GR():
                     af[index+1][indice].append("X")
         return self.convertToAF(af)
 
-    # Método de print do AF
+    # Método de conversao para AF
     def convertToAF(self, afFinal):
         afFinal[1][0] = '->' + afFinal[1][0]
         for linhas in afFinal:
@@ -131,6 +139,7 @@ class GR():
                 if elements == []:
                     elements.append("-")
 
+        # Método que monta as tuplas de transições para criação do automato
         setTuplas = []
         for linha in afFinal[1:]:
             for index, element in enumerate(linha[1:]):
