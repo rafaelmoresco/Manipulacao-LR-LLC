@@ -476,7 +476,7 @@ class FiniteAutomata:
                 else:
                     outputString = outputString+'|'+'-'
             outputString = outputString+'\n'
-        with open('gerados/'+stringOp, 'w') as file:
+        with open(stringOp, 'w') as file:
             file.write(outputString)
         print(f'Arquivo "{stringOp}" gerado/atualizado!')
 
