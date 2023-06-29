@@ -9,7 +9,7 @@ reader = Reader()
 finiteAutomataUtils = FiniteAutomataUtils()
 
 AVAILABLE_OPERATIONS = {
-    "Geral": ['disponivel', 'sair'],
+    'Geral': ['disponivel', 'sair'],
     'Autômato Finito': ["determinizarAF", "minimizarAF", "uniaoAF", "intersecaoAF", 'leituraSentencaAF'],
     'Conversões': ['GRparaAF', 'AFparaGR', 'REGEXparaAFD'],
     'Gramática Livre de Contexto': ['fatorarGLC', 'removerRecursaoEsqGLC', 'leituraSentencaGLC']
