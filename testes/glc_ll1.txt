@@ -1,5 +1,5 @@
-P -> KVC
-K -> cK | &
-V -> vV | F
-F -> fP;F | &
-C -> bVCe | k;C | &
+P -> K V C
+K -> c K | &
+V -> v V | F
+F -> f P ; F | &
+C -> b V C e | com ; C | &

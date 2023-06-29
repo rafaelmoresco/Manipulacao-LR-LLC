@@ -34,7 +34,8 @@ class ContextFreeGrammar:
     @property
     def firsts(self) -> Dict[str, Set[str]]:
         self.__calcFirsts()
-        return self.__firsts
+        firsts = {sym: prods for sym, prods in self.__firsts.items() if sym in self.__nonTerminals}
+        return firsts
     
     @property
     def follows(self) -> Dict[str, Set[str]]:
@@ -104,19 +105,20 @@ class ContextFreeGrammar:
         return firsts
     
     def __isNonDeterministic(self) -> bool:
-        '''Verifica se a gramatica é não fatorada'''
+        '''Verifica se a gramatica é não deterministica (direta ou indireta)'''
         for symbol in self.__productions:
             listFinals = []
             for production in self.__productions[symbol]:
                 # Monta uma lista com todos os firsts de cada produção no símbolo
                 listFinals.append(self.__getFirstsFromProduction(production))
             # Percorre a lista gerada, e se consegue chegar no mesmo first pelos dois lados da produção, retorna que não é fatorada
-            for item in listFinals:
-                for content in item:
-                    for anoterOne in listFinals:
-                        if listFinals.index(item) != listFinals.index(anoterOne):
-                            if content in anoterOne and content != '&':
-                                return True
+            firstsCountDict = dict()
+            for finals in listFinals:
+                for final in finals:
+                    if not final in firstsCountDict:
+                        firstsCountDict[final] = 1
+                    else:
+                        return True
         return False
 
     #################### Regras/Lógicas ####################
@@ -434,7 +436,8 @@ class ContextFreeGrammar:
         # Se há, a gramatica não é LL(1)
         for symbol in self.__nonTerminals:
             if '&' not in self.__firsts[symbol]: continue
-            if self.__firsts[symbol].intersection(self.__follows[symbol]):
+            intersection = self.__firsts[symbol].intersection(self.__follows[symbol])
+            if len(intersection) > 0:
                 print("Gramática não é LL(1)")
                 return
         self.__buildLL1Table()
@@ -485,6 +488,7 @@ class ContextFreeGrammar:
         '''Transforma as produções e as escreve em um arquivo em forma de gramática'''
         with open(filepath, 'w') as file:
             file.write(self.__productionsToStr())
+        print(f'Arquivo "{filepath}" gerado/atualizado!')
 
     def leftFactor(self, depth=10) -> None:
         '''Fatora a gramática, tentando converter, a cada iteração, as produções não determinísticas diretas e depois indiretas'''
@@ -492,13 +496,11 @@ class ContextFreeGrammar:
         if not self.__isNonDeterministic(): return
         # Remove nao determinismos diretos
         self.__removeDirectNonDeterministicProductions()
-        factorable = False
         for _ in range(depth):
             # Detecta nao determinismos indiretos
             indirectNonDetProds = self.__getIndirectNonDeterministicProductions()
             # Se nao houve detecçao de indiretos, nao precisa de outra iteração
             if not indirectNonDetProds:
-                factorable = True
                 break
             # Converte não determinismo indiretos em diretos
             self.__convertIndirectNonDeterministicProductions(indirectNonDetProds)

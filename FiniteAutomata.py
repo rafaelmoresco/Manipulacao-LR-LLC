@@ -478,7 +478,7 @@ class FiniteAutomata:
             outputString = outputString+'\n'
         with open('gerados/'+stringOp, 'w') as file:
             file.write(outputString)
-        print(f'Arquivo {stringOp} gerado/atualizado!')
+        print(f'Arquivo "{stringOp}" gerado/atualizado!')
 
     def determinize(self) -> 'FiniteAutomata':
         '''Determiniza a instância de FiniteAutomata se for indeterminística (contendo transições por épsilon-fecho ou não), caso contrário retorna ela mesma'''

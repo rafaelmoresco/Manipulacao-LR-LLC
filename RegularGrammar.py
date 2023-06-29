@@ -195,7 +195,7 @@ class GR():
                     arquivo.write(" | " + linha[i])
             arquivo.write('\n')
         arquivo.close()
-        print(f'Arquivo {filename} gerado/atualizado!')
+        print(f'Arquivo "{filename}" gerado/atualizado!')
 
     # Retorna estados da AF
     def getConjuntoEstados(self, af):
